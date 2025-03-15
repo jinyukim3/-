@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랜덤 주사위</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        #result {
+            font-size: 50px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        button {
+            font-size: 30px;
+            padding: 15px 30px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>랜덤 주사위 굴리기 🎲</h1>
+    <p id="result">주사위를 굴려보세요!</p>
+    <button onclick="rollDice()">굴리기</button>
+
+    <script>
+        function rollDice() {
+            let diceNumber = Math.floor(Math.random() * 6) + 1;
+            document.getElementById("result").innerText = `${diceNumber}이 나왔습니다!`;
+        }
+    </script>
+</body>
+</html>
