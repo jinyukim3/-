@@ -1060,10 +1060,13 @@
             <div class="subtitle">WEB EDITION // 3D TRAINING RANGE</div>
 
             <p style="margin-bottom: 25px; color: #a0a5ac; line-height: 1.6;">
-                Welcome to the Valorant 3D practice range. Practice your aim, try out abilities, buy various weapons, and plant/defuse the Spike! Eliminate the bots to score points.
+                Experience high-fidelity 3D tactical combat in the browser. Select from two fully implemented modes: Sandbox Practice Range or the complete 5v5 Unrated Match with economy buy phases, custom abilities, dynamic AI bots, and full side swaps.
             </p>
 
-            <button class="btn" id="start-btn">CHOOSE AGENT</button>
+            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                <button class="btn btn-secondary" id="practice-btn" style="margin: 0; min-width: 220px;">PRACTICE RANGE</button>
+                <button class="btn" id="unrated-btn" style="margin: 0; min-width: 220px; background-color: var(--val-blue); box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);">5v5 UNRATED MATCH</button>
+            </div>
 
             <div class="controls-guide">
                 <div><span>WASD</span> - Move Around</div>
@@ -1813,6 +1816,19 @@ const GAME_STATE = {
     consecutiveLosses: 0,
     killsInRound: 0,
 
+    // 5v5 Unrated Mode variables
+    mode: "practice", // "practice" or "unrated"
+    matchState: "MATCH_INIT",
+    roundNumber: 1,
+    scoreAlly: 0,
+    scoreEnemy: 0,
+    playerSide: "attacker", // "attacker" or "defender"
+    phase: "buy", // "buy", "combat", "post"
+    phaseTimer: 30, // seconds left in phase
+    barriersActive: true,
+    lightShieldOwned: false,
+    heavyShieldOwned: false,
+
     // Abilities
     abilities: {
         c: { charges: 2, maxCharges: 2, cooldown: false, duration: 8000 },
@@ -2140,13 +2156,18 @@ function updateWeaponVisuals() {
    AI BOTS (ENEMIES)
    ========================================== */
 class TrainingBot {
-    constructor(x, z, movementType = 'static') {
+    constructor(x, z, team = 'enemy', agentType = 'jett', movementType = 'static') {
         this.group = new THREE.Group();
+        this.team = team;
+        this.agentType = agentType;
 
-        // Glowing red neon skin material
+        // Custom team color (Blue for Ally, Red for Enemy)
+        const color = (team === 'ally') ? 0x00f3ff : 0xff4655;
+        const emissive = (team === 'ally') ? 0x003344 : 0x660011;
+
         const neonMat = new THREE.MeshStandardMaterial({
-            color: 0xff4655,
-            emissive: 0x990011,
+            color: color,
+            emissive: emissive,
             roughness: 0.3
         });
 
@@ -2161,8 +2182,8 @@ class TrainingBot {
         // Head (critical hit spot!)
         const headGeo = new THREE.SphereGeometry(0.25, 8, 8);
         const headMat = new THREE.MeshStandardMaterial({
-            color: 0xff7979,
-            emissive: 0xff4757,
+            color: (team === 'ally') ? 0x80f5ff : 0xff7979,
+            emissive: (team === 'ally') ? 0x0088aa : 0xff4757,
             roughness: 0.1
         });
         const head = new THREE.Mesh(headGeo, headMat);
@@ -2174,10 +2195,10 @@ class TrainingBot {
         // Visual shield outline (glow)
         const shieldGeo = new THREE.BoxGeometry(0.9, 1.9, 0.9);
         const shieldMat = new THREE.MeshBasicMaterial({
-            color: 0x00f3ff,
+            color: (team === 'ally') ? 0x00f3ff : 0xff4655,
             wireframe: true,
             transparent: true,
-            opacity: 0.15
+            opacity: 0.12
         });
         this.shield = new THREE.Mesh(shieldGeo, shieldMat);
         this.shield.position.y = 1.0;
@@ -2194,7 +2215,7 @@ class TrainingBot {
         this.startX = x;
         this.startZ = z;
         this.dir = Math.random() > 0.5 ? 1 : -1;
-        this.shootCooldown = 1500 + Math.random() * 2000;
+        this.shootCooldown = 2000 + Math.random() * 2000;
         this.lastShootTime = 0;
     }
 
@@ -2203,14 +2224,14 @@ class TrainingBot {
 
         this.hp -= dmg;
 
-        // Brief white/red flash reaction
+        // Brief white flash reaction
         const origColor = this.headMesh.material.color.getHex();
         this.headMesh.material.color.setHex(0xffffff);
         this.headMesh.material.emissive.setHex(0xffffff);
         setTimeout(() => {
             if (this.headMesh) {
-                this.headMesh.material.color.setHex(0xff7979);
-                this.headMesh.material.emissive.setHex(0xff4757);
+                this.headMesh.material.color.setHex((this.team === 'ally') ? 0x80f5ff : 0xff7979);
+                this.headMesh.material.emissive.setHex((this.team === 'ally') ? 0x0088aa : 0xff4757);
             }
         }, 80);
 
@@ -2224,62 +2245,111 @@ class TrainingBot {
     }
 
     die() {
-        // Sound and stats
         AudioSynth.play('hit_body');
-        GAME_STATE.kills++;
-        GAME_STATE.killsInRound++;
-        GAME_STATE.killStreak++;
 
-        // Reward 200 credits per kill instantly
-        GAME_STATE.credits = Math.min(9000, GAME_STATE.credits + 200);
-        updateHUD();
-
-        // Handle Kill Streaks and Banner
-        triggerKillBanner();
-
-        // Feed
-        addKillFeed("Player", GAME_STATE.currentWeapon, "Bot Dummy");
+        if (this.team === 'enemy') {
+            GAME_STATE.kills++;
+            GAME_STATE.killsInRound++;
+            GAME_STATE.killStreak++;
+            GAME_STATE.credits = Math.min(9000, GAME_STATE.credits + 200);
+            updateHUD();
+            triggerKillBanner();
+            addKillFeed("Player", GAME_STATE.currentWeapon, this.agentType.toUpperCase());
+        } else {
+            addKillFeed("Enemy", "vandal", "Ally " + this.agentType.toUpperCase());
+        }
 
         // Simple death particles
         createExplosionParticles(this.group.position);
 
-        // Respawn dummy elsewhere after delay
         scene.remove(this.group);
         bots = bots.filter(b => b.id !== this.id);
 
-        setTimeout(() => {
-            if (GAME_STATE.started) {
-                spawnRandomBot();
-            }
-        }, 1500);
+        if (GAME_STATE.mode === "unrated") {
+            // Check round end conditions!
+            checkUnratedRoundOver();
+        } else {
+            // Sandbox Mode: Respawn dummy elsewhere after delay
+            setTimeout(() => {
+                if (GAME_STATE.started && GAME_STATE.mode === "practice") {
+                    spawnRandomBot();
+                }
+            }, 1500);
+        }
     }
 
     update(delta, time) {
+        // Buy phase -> No movement across barriers
+        if (GAME_STATE.mode === "unrated" && GAME_STATE.phase === "buy") {
+            return;
+        }
+
         // Movement logic
         if (this.movementType === 'strafe') {
-            this.group.position.x += this.dir * 3.5 * delta;
+            this.group.position.x += this.dir * 2.5 * delta;
             if (Math.abs(this.group.position.x - this.startX) > 8) {
                 this.dir *= -1;
             }
         } else if (this.movementType === 'patrol') {
-            this.group.position.z += this.dir * 4.0 * delta;
+            this.group.position.z += this.dir * 3.0 * delta;
             if (Math.abs(this.group.position.z - this.startZ) > 12) {
                 this.dir *= -1;
             }
         }
 
-        // Bot attacking player (simulated tactical firing)
+        // Shooting AI
         if (time - this.lastShootTime > this.shootCooldown) {
             this.lastShootTime = time;
 
-            // Raycast check to see if bot has line of sight
-            const dirToPlayer = new THREE.Vector3().copy(yawObject.position).sub(this.group.position).normalize();
-            const ray = new THREE.Raycaster(this.group.position.clone().addScalar(1), dirToPlayer);
-            const hits = ray.intersectObjects(trainingRangeWalls);
+            if (this.team === 'enemy') {
+                // Enemies target Player or Ally bots
+                let targetPos = new THREE.Vector3().copy(yawObject.position);
+                let targetObj = null;
+                let minDist = this.group.position.distanceTo(targetPos);
 
-            if (hits.length === 0 || hits[0].distance > this.group.position.distanceTo(yawObject.position)) {
-                // Shoot at player
-                botShootPlayer();
+                // If player is dead, don't target player
+                if (GAME_STATE.playerHP <= 0) minDist = 9999;
+
+                bots.forEach(b => {
+                    if (b.team === 'ally') {
+                        const dist = this.group.position.distanceTo(b.group.position);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            targetPos.copy(b.group.position);
+                            targetObj = b;
+                        }
+                    }
+                });
+
+                if (minDist < 35) {
+                    // Shoot!
+                    if (targetObj) {
+                        targetObj.takeDamage(20, false);
+                        createBulletTrail(this.group.position.clone().addScalar(1), targetPos);
+                    } else if (GAME_STATE.playerHP > 0) {
+                        botShootPlayer();
+                        createBulletTrail(this.group.position.clone().addScalar(1), targetPos);
+                    }
+                }
+            } else {
+                // Allies target Enemy bots
+                let targetObj = null;
+                let minDist = 9999;
+
+                bots.forEach(b => {
+                    if (b.team === 'enemy') {
+                        const dist = this.group.position.distanceTo(b.group.position);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            targetObj = b;
+                        }
+                    }
+                });
+
+                if (targetObj && minDist < 35) {
+                    targetObj.takeDamage(25, false);
+                    createBulletTrail(this.group.position.clone().addScalar(1), targetObj.group.position);
+                }
             }
         }
     }
@@ -2292,8 +2362,85 @@ function spawnRandomBot() {
     const rType = types[Math.floor(Math.random() * types.length)];
 
     // Ensure bots don't spawn too close to obstacles
-    const newBot = new TrainingBot(x, z, rType);
+    const newBot = new TrainingBot(x, z, 'enemy', 'jett', rType);
     bots.push(newBot);
+}
+
+function checkUnratedRoundOver() {
+    if (GAME_STATE.mode !== "unrated" || GAME_STATE.phase === "post") return;
+
+    const aliveEnemies = bots.filter(b => b.team === 'enemy').length;
+    const aliveAllies = bots.filter(b => b.team === 'ally').length;
+    const playerTeamDead = (GAME_STATE.playerHP <= 0 && aliveAllies === 0);
+
+    // If Spike is planted, defenders MUST defuse even if attackers are all dead!
+    if (GAME_STATE.spikeState === "planted" || GAME_STATE.spikeState === "defusing") {
+        if (playerTeamDead) {
+            // Player team dead, Defenders lose if they can't defuse!
+            endUnratedRound(false);
+        } else if (aliveEnemies === 0) {
+            // All Enemies (Attackers) dead, but Spike is planted! Player team (Defenders) still needs to defuse!
+            if (GAME_STATE.playerSide === "attacker") {
+                // If player is Attacker and all defenders are dead, Attacker team wins!
+                endUnratedRound(true);
+            }
+        }
+    } else {
+        // Spike not planted -> round ends immediately when one team is wiped!
+        if (aliveEnemies === 0) {
+            endUnratedRound(true);
+        } else if (playerTeamDead) {
+            endUnratedRound(false);
+        }
+    }
+}
+
+function respawnAllPlayers() {
+    // Clear existing bots
+    bots.forEach(b => scene.remove(b.group));
+    bots = [];
+
+    // Position Player
+    if (GAME_STATE.mode === "unrated") {
+        if (GAME_STATE.playerSide === "attacker") {
+            yawObject.position.set(0, PLAYER_HEIGHT, 35);
+        } else {
+            yawObject.position.set(0, PLAYER_HEIGHT, -35);
+        }
+    } else {
+        yawObject.position.set(0, PLAYER_HEIGHT, 15); // Sandbox default
+    }
+    pitchObject.rotation.set(0, 0, 0);
+    yawObject.rotation.set(0, 0, 0);
+
+    // Spawn 5v5 players in Unrated Mode
+    if (GAME_STATE.mode === "unrated") {
+        const allyZ = (GAME_STATE.playerSide === "attacker") ? 35 : -35;
+        const enemyZ = (GAME_STATE.playerSide === "attacker") ? -35 : 35;
+
+        // Spawn 4 Allies (with blue/cyan glow!)
+        const allyAgents = ["sage", "phoenix", "reyna", "sage"].filter(a => a !== GAME_STATE.selectedAgent);
+        for (let i = 0; i < 4; i++) {
+            const x = -15 + i * 10;
+            const agentType = allyAgents[i] || "sage";
+            const bot = new TrainingBot(x, allyZ, 'ally', agentType, 'patrol');
+            bots.push(bot);
+        }
+
+        // Spawn 5 Enemies (with red glow!)
+        const enemyAgents = ["jett", "sage", "phoenix", "reyna", "sage"];
+        for (let i = 0; i < 5; i++) {
+            const x = -20 + i * 10;
+            const agentType = enemyAgents[i];
+            const bot = new TrainingBot(x, enemyZ, 'enemy', agentType, 'strafe');
+            bots.push(bot);
+        }
+    } else {
+        // Sandbox Practice range default
+        for (let i = 0; i < 4; i++) {
+            spawnRandomBot();
+        }
+    }
 }
 
 function createExplosionParticles(pos) {
@@ -3355,16 +3502,7 @@ function respawnPlayer() {
     // Reset Spike
     resetSpikeScenarioDelay();
 
-    yawObject.position.set(0, PLAYER_HEIGHT, 15);
-    pitchObject.rotation.set(0, 0, 0);
-    yawObject.rotation.set(0, 0, 0);
-
-    // Clear and respawn new bots
-    bots.forEach(b => scene.remove(b.group));
-    bots = [];
-    for(let i=0; i<4; i++) {
-        spawnRandomBot();
-    }
+    respawnAllPlayers();
 
     document.getElementById('death-screen').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
@@ -3488,6 +3626,201 @@ function updateTrails() {
     });
 }
 
+let buyPhaseBarrierMesh = null;
+
+function createBuyPhaseBarriers() {
+    if (buyPhaseBarrierMesh) return;
+
+    // A beautiful translucent glowing blue barrier wall across the center (z = 0)
+    const barrierGeo = new THREE.BoxGeometry(120, 15, 1);
+    const barrierMat = new THREE.MeshBasicMaterial({
+        color: 0x00f3ff,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    buyPhaseBarrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
+    buyPhaseBarrierMesh.position.set(0, 7.5, 0); // At z = 0
+    scene.add(buyPhaseBarrierMesh);
+}
+
+function removeBuyPhaseBarriers() {
+    if (buyPhaseBarrierMesh) {
+        scene.remove(buyPhaseBarrierMesh);
+        buyPhaseBarrierMesh = null;
+    }
+}
+
+function updateUnratedMatchFlow(delta) {
+    if (!GAME_STATE.started || GAME_STATE.mode !== "unrated") return;
+
+    // Check if round is already in post-phase
+    if (GAME_STATE.phase === "post") {
+        GAME_STATE.phaseTimer -= delta;
+
+        // Show next round countdown
+        const secs = Math.max(0, Math.ceil(GAME_STATE.phaseTimer));
+        document.getElementById('hud-timer').innerText = "00:0" + secs;
+        document.getElementById('hud-timer').style.color = 'var(--val-red)';
+
+        if (GAME_STATE.phaseTimer <= 0) {
+            startNextUnratedRound();
+        }
+        return;
+    }
+
+    // Decrement active phase timer
+    GAME_STATE.phaseTimer -= delta;
+
+    // Format mm:ss timer display
+    const mins = Math.floor(Math.max(0, GAME_STATE.phaseTimer) / 60);
+    const secs = Math.floor(Math.max(0, GAME_STATE.phaseTimer) % 60);
+    const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    if (GAME_STATE.phase === "buy") {
+        document.getElementById('hud-timer').innerText = timeStr;
+        document.getElementById('hud-timer').style.color = 'var(--val-blue)';
+
+        // Ensure barriers are visible
+        createBuyPhaseBarriers();
+
+        if (GAME_STATE.phaseTimer <= 0) {
+            // Transition to COMBAT PHASE
+            GAME_STATE.phase = "combat";
+            GAME_STATE.phaseTimer = 100.0;
+            removeBuyPhaseBarriers();
+            AudioSynth.play('kill_banner');
+            showNotificationBanner("BARRIERS DOWN // FIGHT!", "win");
+        }
+    } else if (GAME_STATE.phase === "combat") {
+        // If spike is planted, the spike countdown handles timer
+        if (GAME_STATE.spikeState === "planted" || GAME_STATE.spikeState === "defusing") {
+            // handled in spike updates
+        } else {
+            document.getElementById('hud-timer').innerText = timeStr;
+            document.getElementById('hud-timer').style.color = 'var(--val-white)';
+
+            if (GAME_STATE.phaseTimer <= 0) {
+                // TIME EXPIRED -> Defenders win round!
+                // Attackers lose, Defenders win. Let's find out if player is Defender:
+                const playerWon = (GAME_STATE.playerSide === "defender");
+                endUnratedRound(playerWon);
+            }
+        }
+    }
+}
+
+function endUnratedRound(isAllyVictory) {
+    if (GAME_STATE.phase === "post") return; // already ended
+
+    GAME_STATE.phase = "post";
+    GAME_STATE.phaseTimer = 5.0; // 5 seconds post-round time
+
+    if (isAllyVictory) {
+        GAME_STATE.scoreAlly++;
+        GAME_STATE.roundsWon++;
+        addRoundCredits(true);
+        triggerCustomWinBanner(true);
+    } else {
+        GAME_STATE.scoreEnemy++;
+        GAME_STATE.roundsLost++;
+        addRoundCredits(false);
+        triggerCustomWinBanner(false);
+    }
+
+    updateHUD();
+}
+
+function startNextUnratedRound() {
+    // If scores reach 13, match is over!
+    if (GAME_STATE.scoreAlly >= 13) {
+        declareMatchOver(true);
+        return;
+    } else if (GAME_STATE.scoreEnemy >= 13) {
+        declareMatchOver(false);
+        return;
+    }
+
+    // Next round
+    GAME_STATE.roundNumber++;
+
+    // Check for side swap at round 13
+    if (GAME_STATE.roundNumber === 13) {
+        // Swap sides
+        GAME_STATE.playerSide = (GAME_STATE.playerSide === "attacker") ? "defender" : "attacker";
+        showNotificationBanner("SIDE SWAP // 진영 교대", "win");
+
+        // Reset credits economy back to 800!
+        GAME_STATE.credits = 800;
+
+        // Clear equipment
+        GAME_STATE.currentWeapon = "sheriff";
+        GAME_STATE.ammoClip = WEAPONS_STATS.sheriff.clipSize;
+        GAME_STATE.ammoReserve = WEAPONS_STATS.sheriff.reserveSize;
+        GAME_STATE.playerShield = 0;
+
+        updateWeaponVisuals();
+    } else {
+        // Carry over equipment if survived, reset if died!
+        if (GAME_STATE.playerHP <= 0) {
+            GAME_STATE.currentWeapon = "sheriff";
+            GAME_STATE.ammoClip = WEAPONS_STATS.sheriff.clipSize;
+            GAME_STATE.ammoReserve = WEAPONS_STATS.sheriff.reserveSize;
+            GAME_STATE.playerShield = 0;
+            updateWeaponVisuals();
+        }
+    }
+
+    // Reset player HP/Shield
+    GAME_STATE.playerHP = 100;
+    if (GAME_STATE.playerShield <= 0) {
+        GAME_STATE.playerShield = 0;
+    }
+
+    // Setup next phase
+    GAME_STATE.phase = "buy";
+    // First round of half is 45 seconds buy phase, standard is 30 seconds
+    GAME_STATE.phaseTimer = (GAME_STATE.roundNumber === 1 || GAME_STATE.roundNumber === 13) ? 45.0 : 30.0;
+
+    // Reset Spike State
+    if (spike3D) {
+        scene.remove(spike3D);
+        spike3D = null;
+    }
+    GAME_STATE.spikeState = "idle";
+    GAME_STATE.spikePlantProgress = 0;
+    GAME_STATE.spikeDefuseProgress = 0;
+    stopSpikeCountdown();
+
+    // Spawn players (allies & enemies) back to spawn points
+    respawnAllPlayers();
+
+    updateHUD();
+}
+
+function declareMatchOver(playerTeamWon) {
+    GAME_STATE.started = false;
+    if (document.pointerLockElement) {
+        try {
+            document.exitPointerLock();
+        } catch (err) {}
+    }
+
+    // Display final stats
+    const acc = GAME_STATE.totalShots > 0 ? Math.round((GAME_STATE.totalHits / GAME_STATE.totalShots) * 100) : 0;
+
+    const banner = playerTeamWon ? "MATCH VICTORY" : "MATCH DEFEAT";
+    const color = playerTeamWon ? "var(--val-blue)" : "var(--val-red)";
+
+    document.getElementById('death-stats').innerHTML = `
+        <span style="color: ${color}; font-size: 2rem; font-weight: bold; display: block; margin-bottom: 10px;">${banner}</span>
+        Final Score: ${GAME_STATE.scoreAlly} - ${GAME_STATE.scoreEnemy}<br>
+        Kills: ${GAME_STATE.kills} | Accuracy: ${acc}% (HS: ${GAME_STATE.totalHeadshots})
+    `;
+
+    document.getElementById('death-screen').style.display = 'flex';
+}
+
 function gameLoop() {
     requestAnimationFrame(gameLoop);
 
@@ -3496,6 +3829,9 @@ function gameLoop() {
 
     // Physics movement and collisions
     updatePhysics(delta);
+
+    // Unrated Match State machine and round loop updates
+    updateUnratedMatchFlow(delta);
 
     // Update bullet traces
     updateTrails();
@@ -3574,8 +3910,8 @@ window.addEventListener('load', () => {
         });
     });
 
-    // Start Button Action -> Open Agent Selection
-    document.getElementById('start-btn').addEventListener('click', () => {
+    function startAgentSelection(mode) {
+        GAME_STATE.mode = mode;
         AudioSynth.init();
         document.getElementById('main-menu').style.display = 'none';
         document.getElementById('agent-select-screen').style.display = 'flex';
@@ -3596,6 +3932,16 @@ window.addEventListener('load', () => {
                 lockInAgent(selectedAgent);
             }
         }, 1000);
+    }
+
+    // Practice Button Action -> Open Agent Selection
+    document.getElementById('practice-btn').addEventListener('click', () => {
+        startAgentSelection('practice');
+    });
+
+    // Unrated Button Action -> Open Agent Selection
+    document.getElementById('unrated-btn').addEventListener('click', () => {
+        startAgentSelection('unrated');
     });
 
     // Lock in Button Action
