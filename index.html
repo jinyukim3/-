@@ -39,6 +39,232 @@
             position: relative;
         }
 
+        /* Agent Selection Styles */
+        #agent-select-screen {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle, rgba(17,20,26,0.95) 0%, rgba(10,12,16,0.99) 100%);
+            z-index: 10;
+        }
+        .agent-select-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 25px;
+            border-bottom: 2px solid rgba(255, 70, 85, 0.3);
+            padding-bottom: 10px;
+        }
+        .agent-select-title {
+            font-size: 2.2rem;
+            letter-spacing: 3px;
+            font-weight: bold;
+            color: var(--val-white);
+        }
+        #agent-select-timer {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 2.5rem;
+            color: var(--val-red);
+            font-weight: bold;
+            background: rgba(17, 20, 26, 0.8);
+            padding: 5px 15px;
+            border: 1px solid var(--val-red);
+        }
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        .agent-card {
+            background: rgba(31, 35, 38, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+        }
+        .agent-card:hover {
+            border-color: var(--val-blue);
+            background: rgba(0, 243, 255, 0.05);
+            transform: translateY(-4px);
+        }
+        .agent-card.selected {
+            border-color: var(--val-red);
+            background: rgba(255, 70, 85, 0.08);
+            box-shadow: 0 0 15px rgba(255, 70, 85, 0.2);
+        }
+        .agent-card.locked {
+            border-color: var(--val-red);
+            background: rgba(255, 70, 85, 0.2);
+        }
+        .agent-portrait {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));
+        }
+        .agent-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: var(--val-white);
+        }
+        .agent-role {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 2px;
+            letter-spacing: 1px;
+        }
+        #agent-details {
+            background: rgba(17, 20, 26, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        #selected-agent-name {
+            font-size: 2rem;
+            letter-spacing: 2px;
+            color: var(--val-red);
+            margin-bottom: 5px;
+        }
+        #selected-agent-desc {
+            font-size: 0.95rem;
+            color: #a0a5ac;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .ability-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .ability-info-item {
+            background: rgba(31, 35, 38, 0.5);
+            padding: 10px;
+            border-left: 3px solid var(--val-blue);
+        }
+        .ability-info-key {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--val-blue);
+            font-weight: bold;
+        }
+        .ability-info-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--val-white);
+            margin: 2px 0;
+        }
+        .ability-info-desc {
+            font-size: 0.8rem;
+            color: #a0a5ac;
+            line-height: 1.3;
+        }
+
+        /* Scoreboard CSS */
+        #scoreboard-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 12, 16, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9;
+            pointer-events: none;
+        }
+        .scoreboard-content {
+            width: 85%;
+            max-width: 900px;
+            background: rgba(17, 20, 26, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9);
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+        }
+        .scoreboard-header-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--val-white);
+            border-bottom: 2px solid var(--val-red);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        #scoreboard-round-info {
+            font-size: 1.1rem;
+            color: var(--val-red);
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .scoreboard-team {
+            display: flex;
+            flex-direction: column;
+        }
+        .team-header {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--val-blue);
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        .team-header.enemy-header {
+            color: var(--val-red);
+        }
+        .player-row {
+            display: grid;
+            grid-template-columns: 120px 1fr 140px 120px 100px;
+            padding: 6px 12px;
+            background: rgba(31, 35, 38, 0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            align-items: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.95rem;
+        }
+        .player-row.header-row {
+            background: rgba(17, 20, 26, 0.8);
+            font-weight: bold;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+            border-bottom: 1.5px solid rgba(255,255,255,0.2);
+            padding: 4px 12px;
+        }
+        .player-row.active-player-row {
+            background: rgba(0, 243, 255, 0.12);
+            border: 1.5px solid var(--val-blue);
+            font-weight: bold;
+        }
+        .col-agent {
+            color: var(--val-white);
+            font-weight: bold;
+        }
+        .col-name {
+            color: #dcdde1;
+        }
+        .col-weapon {
+            color: #fbc531;
+        }
+        .col-kda {
+            text-align: center;
+            color: var(--val-white);
+        }
+        .col-credits {
+            text-align: right;
+            color: #4cd137;
+            font-weight: bold;
+        }
+
         canvas {
             display: block;
             width: 100%;
@@ -837,7 +1063,7 @@
                 Welcome to the Valorant 3D practice range. Practice your aim, try out abilities, buy various weapons, and plant/defuse the Spike! Eliminate the bots to score points.
             </p>
 
-            <button class="btn" id="start-btn">ENTER THE RANGE</button>
+            <button class="btn" id="start-btn">CHOOSE AGENT</button>
 
             <div class="controls-guide">
                 <div><span>WASD</span> - Move Around</div>
@@ -845,11 +1071,113 @@
                 <div><span>LEFT CLICK</span> - Shoot Weapon</div>
                 <div><span>RIGHT CLICK</span> - Zoom / Aim Down Sights</div>
                 <div><span>R</span> - Reload Weapon</div>
-                <div><span>B</span> - Buy / Select Arsenal</div>
-                <div><span>C</span> - Barrier Orb Ability</div>
-                <div><span>Q</span> - Updraft (Jump Boost)</div>
-                <div><span>E</span> - Tailwind Dash (WASD dir)</div>
+                <div><span>B</span> - Buy / Select Arsenal (B)</div>
+                <div><span>C / Q / E / X</span> - Agent Tactical Abilities</div>
                 <div><span>F</span> - Plant / Defuse Spike</div>
+                <div><span>TAB (HOLD)</span> - Scoreboard / Weapon Loadouts</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Selection Screen -->
+    <div id="agent-select-screen" class="overlay-screen">
+        <div class="screen-content" style="max-width: 950px; width: 90%;">
+            <div class="agent-select-header">
+                <span class="agent-select-title">SELECT YOUR AGENT</span>
+                <span id="agent-select-timer">80</span>
+            </div>
+
+            <div class="agent-grid">
+                <div class="agent-card selected" data-agent="jett">
+                    <div class="agent-portrait">💨</div>
+                    <div class="agent-name">JETT</div>
+                    <div class="agent-role">DUELIST</div>
+                </div>
+                <div class="agent-card" data-agent="sage">
+                    <div class="agent-portrait">❄️</div>
+                    <div class="agent-name">SAGE</div>
+                    <div class="agent-role">SENTINEL</div>
+                </div>
+                <div class="agent-card" data-agent="phoenix">
+                    <div class="agent-portrait">🔥</div>
+                    <div class="agent-name">PHOENIX</div>
+                    <div class="agent-role">DUELIST</div>
+                </div>
+                <div class="agent-card" data-agent="reyna">
+                    <div class="agent-portrait">👁️</div>
+                    <div class="agent-name">REYNA</div>
+                    <div class="agent-role">DUELIST</div>
+                </div>
+            </div>
+
+            <div id="agent-details">
+                <div id="selected-agent-name">JETT</div>
+                <p id="selected-agent-desc">An agile duelist from South Korea, Jett's decision-making and athletic fighting style allow her to take risks no one else can.</p>
+                <div class="ability-info-grid" id="selected-agent-abilities">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <button class="btn" id="lock-in-btn" style="width: 250px;">LOCK IN</button>
+        </div>
+    </div>
+
+    <!-- Scoreboard Overlay -->
+    <div id="scoreboard-overlay">
+        <div class="scoreboard-content">
+            <div class="scoreboard-header-title">
+                <span>ROUND RESULTS & STATS</span>
+                <span id="scoreboard-round-info">ROUND 1 // BUY PHASE</span>
+            </div>
+
+            <div class="scoreboard-team" style="margin-bottom: 20px;">
+                <div class="team-header">ALLY TEAM</div>
+                <div class="player-row header-row">
+                    <span>AGENT</span>
+                    <span>PLAYER NAME</span>
+                    <span>EQUIPPED WEAPON</span>
+                    <span style="text-align: center;">K / D / A</span>
+                    <span style="text-align: right;">CREDITS</span>
+                </div>
+                <div class="player-row active-player-row" id="score-row-player">
+                    <span class="col-agent">JETT</span>
+                    <span class="col-name">Player (You)</span>
+                    <span class="col-weapon">Vandal</span>
+                    <span class="col-kda">0 / 0 / 0</span>
+                    <span class="col-credits">¤800</span>
+                </div>
+                <div class="player-row">
+                    <span class="col-agent">SAGE</span>
+                    <span class="col-name">Ally Bot 1</span>
+                    <span class="col-weapon">Sheriff</span>
+                    <span class="col-kda">0 / 0 / 0</span>
+                    <span class="col-credits">¤1200</span>
+                </div>
+            </div>
+
+            <div class="scoreboard-team">
+                <div class="team-header enemy-header">ENEMY TEAM</div>
+                <div class="player-row header-row">
+                    <span>AGENT</span>
+                    <span>BOT NAME</span>
+                    <span>EQUIPPED WEAPON</span>
+                    <span style="text-align: center;">K / D / A</span>
+                    <span style="text-align: right;">CREDITS</span>
+                </div>
+                <div class="player-row">
+                    <span class="col-agent" style="color: var(--val-red);">OMEN</span>
+                    <span class="col-name">Enemy Dummy 1</span>
+                    <span class="col-weapon">Vandal</span>
+                    <span class="col-kda">0 / 0 / 0</span>
+                    <span class="col-credits">¤1600</span>
+                </div>
+                <div class="player-row">
+                    <span class="col-agent" style="color: var(--val-red);">SOVA</span>
+                    <span class="col-name">Enemy Dummy 2</span>
+                    <span class="col-weapon">Operator</span>
+                    <span class="col-kda">0 / 0 / 0</span>
+                    <span class="col-credits">¤4700</span>
+                </div>
             </div>
         </div>
     </div>
@@ -879,27 +1207,30 @@
     <!-- Buy Menu Overlay -->
     <div id="buy-menu">
         <div class="buy-header">
-            <h2 style="font-size: 1.8rem; letter-spacing: 2px;">SELECT WEAPON ARSENAL</h2>
+            <div style="display: flex; align-items: center;">
+                <h2 style="font-size: 1.8rem; letter-spacing: 2px;">SELECT WEAPON ARSENAL</h2>
+                <span id="buy-menu-credits" style="color: #4cd137; font-size: 1.8rem; font-weight: bold; margin-left: 20px; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px;">¤800</span>
+            </div>
             <button class="btn" id="close-buy-btn" style="padding: 5px 20px; font-size: 1rem; margin: 0;">CLOSE (B)</button>
         </div>
         <div class="buy-grid">
             <div class="weapon-card" data-weapon="vandal">
-                <span class="weapon-card-price">CREDS: 2900</span>
+                <span class="weapon-card-price">¤2900</span>
                 <div class="weapon-card-title">VANDAL</div>
                 <div class="weapon-card-desc">Fully automatic assault rifle. One-shot headshot at any range. High recoil.</div>
             </div>
             <div class="weapon-card" data-weapon="phantom">
-                <span class="weapon-card-price">CREDS: 2900</span>
+                <span class="weapon-card-price">¤2900</span>
                 <div class="weapon-card-title">PHANTOM</div>
                 <div class="weapon-card-desc">Suppressed automatic rifle. Faster fire rate, lower recoil, quieter shots.</div>
             </div>
             <div class="weapon-card" data-weapon="operator">
-                <span class="weapon-card-price">CREDS: 4700</span>
+                <span class="weapon-card-price">¤4700</span>
                 <div class="weapon-card-title">OPERATOR</div>
                 <div class="weapon-card-desc">High caliber bolt-action sniper rifle. One-shot body shot. Zoom in to aim.</div>
             </div>
             <div class="weapon-card" data-weapon="sheriff">
-                <span class="weapon-card-price">CREDS: 800</span>
+                <span class="weapon-card-price">¤800</span>
                 <div class="weapon-card-title">SHERIFF</div>
                 <div class="weapon-card-desc">High-impact six-shooter revolver. Precision aim rewarded with high damage.</div>
             </div>
@@ -1015,6 +1346,7 @@
 
             <!-- Weapon panel -->
             <div class="weapon-panel">
+                <div id="hud-credits" style="font-family: 'Share Tech Mono', monospace; font-size: 1.4rem; color: #4cd137; font-weight: bold; margin-bottom: 2px;">¤800</div>
                 <div>
                     <span class="ammo-value" id="hud-ammo-clip">30</span>
                     <span class="ammo-max">/ <span id="hud-ammo-reserve">90</span></span>
@@ -1332,6 +1664,26 @@ const AudioSynth = {
 
         osc.start();
         osc.stop(this.ctx.currentTime + 0.5);
+    },
+
+    playDefuseStartSound(isHalfway) {
+        if (!this.ctx) this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.type = 'triangle';
+
+        // Low pitch for 0%, High pitch for 50% checkpoint
+        const pitch = isHalfway ? 660 : 330;
+        osc.frequency.setValueAtTime(pitch, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(pitch + 100, this.ctx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.4);
     }
 };
 
@@ -1350,7 +1702,8 @@ const WEAPONS_STATS = {
         recoilX: 0.005,
         recoilY: 0.012,
         adsZoom: 1.2,
-        color: 0x2f3640
+        color: 0x2f3640,
+        cost: 2900
     },
     phantom: {
         name: "Phantom",
@@ -1362,7 +1715,8 @@ const WEAPONS_STATS = {
         recoilX: 0.003,
         recoilY: 0.008,
         adsZoom: 1.25,
-        color: 0x353b48
+        color: 0x353b48,
+        cost: 2900
     },
     operator: {
         name: "Operator",
@@ -1374,7 +1728,8 @@ const WEAPONS_STATS = {
         recoilX: 0.02,
         recoilY: 0.04,
         adsZoom: 3.5, // Heavy sniper zoom
-        color: 0x1e272e
+        color: 0x1e272e,
+        cost: 4700
     },
     sheriff: {
         name: "Sheriff",
@@ -1386,7 +1741,55 @@ const WEAPONS_STATS = {
         recoilX: 0.008,
         recoilY: 0.025,
         adsZoom: 1.1,
-        color: 0x718093
+        color: 0x718093,
+        cost: 800
+    }
+};
+
+const AGENTS_DATA = {
+    jett: {
+        name: "JETT",
+        role: "DUELIST",
+        desc: "An agile duelist from South Korea, Jett's decision-making and athletic fighting style allow her to take risks no one else can.",
+        portrait: "💨",
+        abilities: {
+            c: { name: "Cloudburst", desc: "Deploy a quick smoke cloud that blocks vision.", maxCharges: 2, charges: 2 },
+            q: { name: "Updraft", desc: "Instantly propel Jett high into the air.", maxCharges: 2, charges: 2 },
+            e: { name: "Tailwind", desc: "Instantly dash in movement direction.", maxCharges: 1, charges: 1 }
+        }
+    },
+    sage: {
+        name: "SAGE",
+        role: "SENTINEL",
+        desc: "A bastion of China, Sage creates safety for herself and her team. She can construct breakable barrier walls.",
+        portrait: "❄️",
+        abilities: {
+            c: { name: "Barrier Orb", desc: "Deploy a solid barrier wall on the field.", maxCharges: 1, charges: 1 },
+            q: { name: "Slow Orb", desc: "Cast an ice field that slows down movement.", maxCharges: 2, charges: 2 },
+            e: { name: "Healing Orb", desc: "Restore health back to full over time.", maxCharges: 1, charges: 1 }
+        }
+    },
+    phoenix: {
+        name: "PHOENIX",
+        role: "DUELIST",
+        desc: "Hailing from the United Kingdom, Phoenix's star power shines, igniting the battlefield with flash and fire.",
+        portrait: "🔥",
+        abilities: {
+            c: { name: "Blaze", desc: "Cast a flame wall that blocks vision.", maxCharges: 1, charges: 1 },
+            q: { name: "Curveball", desc: "Throw a flare orb that curves and flashes.", maxCharges: 2, charges: 2 },
+            e: { name: "Hot Hands", desc: "Throw a fireball that ignites the ground.", maxCharges: 1, charges: 1 }
+        }
+    },
+    reyna: {
+        name: "REYNA",
+        role: "DUELIST",
+        desc: "Forged in Mexico, Reyna dominates single combat, popping off with each kill she secures.",
+        portrait: "👁️",
+        abilities: {
+            c: { name: "Leer", desc: "Cast an eye that nearsights enemies looking at it.", maxCharges: 2, charges: 2 },
+            q: { name: "Devour", desc: "Rapidly heal yourself over a short duration.", maxCharges: 2, charges: 2 },
+            e: { name: "Dismiss", desc: "Become intangible for a short duration.", maxCharges: 1, charges: 1 }
+        }
     }
 };
 
@@ -1394,9 +1797,12 @@ const GAME_STATE = {
     started: false,
     playerHP: 100,
     playerShield: 50,
-    currentWeapon: "vandal",
-    ammoClip: 30,
-    ammoReserve: 90,
+    credits: 5000,
+    selectedAgent: "jett",
+    agentLocked: false,
+    currentWeapon: "sheriff", // Start with Sheriff by default
+    ammoClip: 6,
+    ammoReserve: 24,
     kills: 0,
     deaths: 0,
     roundsWon: 0,
@@ -1404,10 +1810,12 @@ const GAME_STATE = {
     totalShots: 0,
     totalHits: 0,
     totalHeadshots: 0,
+    consecutiveLosses: 0,
+    killsInRound: 0,
 
     // Abilities
     abilities: {
-        c: { charges: 1, maxCharges: 1, cooldown: false, duration: 8000 },
+        c: { charges: 2, maxCharges: 2, cooldown: false, duration: 8000 },
         q: { charges: 2, maxCharges: 2, cooldown: false },
         e: { charges: 1, maxCharges: 1, cooldown: false }
     },
@@ -1423,7 +1831,11 @@ const GAME_STATE = {
     spikeTimer: 45, // seconds
     spikePlacedPos: null,
     inSpikeSite: false,
-    spikeTimerInterval: null
+    spikeTimerInterval: null,
+
+    // Custom beep states
+    nextBeepTime: 0,
+    lastBeepPlayed: 0
 };
 
 
@@ -1815,7 +2227,12 @@ class TrainingBot {
         // Sound and stats
         AudioSynth.play('hit_body');
         GAME_STATE.kills++;
+        GAME_STATE.killsInRound++;
         GAME_STATE.killStreak++;
+
+        // Reward 200 credits per kill instantly
+        GAME_STATE.credits = Math.min(9000, GAME_STATE.credits + 200);
+        updateHUD();
 
         // Handle Kill Streaks and Banner
         triggerKillBanner();
@@ -2203,6 +2620,23 @@ function useAbility(key) {
 /* ==========================================
    SPIKE MECHANICS (PLANT & DEFUSE)
    ========================================== */
+function addRoundCredits(isWin) {
+    if (isWin) {
+        GAME_STATE.consecutiveLosses = 0;
+        GAME_STATE.credits = Math.min(9000, GAME_STATE.credits + 3000);
+    } else {
+        GAME_STATE.consecutiveLosses++;
+        let bonus = 1900;
+        if (GAME_STATE.consecutiveLosses === 2) {
+            bonus = 2400; // 2연패
+        } else if (GAME_STATE.consecutiveLosses >= 3) {
+            bonus = 2900; // 3연패 이상
+        }
+        GAME_STATE.credits = Math.min(9000, GAME_STATE.credits + bonus);
+    }
+    updateHUD();
+}
+
 function handleSpikeInteractions(delta) {
     const spikePrompt = document.getElementById('spike-prompt');
     const progressContainer = document.getElementById('spike-progress-container');
@@ -2252,6 +2686,9 @@ function handleSpikeInteractions(delta) {
                 progressContainer.style.display = 'none';
                 spikePrompt.style.display = 'none';
 
+                // Award plant credits instantly (+300)
+                GAME_STATE.credits = Math.min(9000, GAME_STATE.credits + 300);
+
                 // Drop Spike Mesh on site
                 createSpike3D(yawObject.position.clone().setY(0.4));
                 startSpikeCountdown();
@@ -2272,6 +2709,13 @@ function handleSpikeInteractions(delta) {
                 GAME_STATE.spikeState = "defusing";
                 progressContainer.style.display = 'block';
                 progressText.innerText = "DEFUSING SPIKE...";
+
+                // Low/High audio feedback depending on 50% checkpoint
+                if (GAME_STATE.spikeDefuseProgress >= 50) {
+                    AudioSynth.playDefuseStartSound(true);
+                } else {
+                    AudioSynth.playDefuseStartSound(false);
+                }
             }
         } else {
             spikePrompt.style.display = 'none';
@@ -2279,10 +2723,17 @@ function handleSpikeInteractions(delta) {
     } else if (GAME_STATE.spikeState === "defusing") {
         const distToSpike = yawObject.position.distanceTo(spike3D.position);
         if (!keys['KeyF'] || distToSpike >= 4) {
+            // Cancel defusing - Apply progress savepoint!
             GAME_STATE.spikeState = "planted";
             progressContainer.style.display = 'none';
+            if (GAME_STATE.spikeDefuseProgress >= 50) {
+                GAME_STATE.spikeDefuseProgress = 50; // checkpoint save
+            } else {
+                GAME_STATE.spikeDefuseProgress = 0;
+            }
         } else {
-            GAME_STATE.spikeDefuseProgress += delta * 25; // 4 seconds to defuse
+            // Defusing takes exactly 7 seconds
+            GAME_STATE.spikeDefuseProgress += (delta / 7) * 100;
             progressBar.style.width = GAME_STATE.spikeDefuseProgress + "%";
 
             if (GAME_STATE.spikeDefuseProgress >= 100) {
@@ -2295,12 +2746,57 @@ function handleSpikeInteractions(delta) {
                 AudioSynth.play('spike_defused');
 
                 GAME_STATE.roundsWon++;
-                showNotificationBanner("SPIKE DEFUSED // VICTORY", "win");
+                addRoundCredits(true);
+
+                triggerCustomWinBanner(true); // check for flawless/clutch/etc.
                 resetSpikeScenarioDelay();
             }
         }
     } else {
         spikePrompt.style.display = 'none';
+    }
+
+    // High Precision Spike countdown + Beeps
+    if (GAME_STATE.spikeState === "planted" || GAME_STATE.spikeState === "defusing") {
+        GAME_STATE.spikeTimer -= delta;
+
+        // Determine beep interval based on remaining time
+        let interval = 1.0; // 45s to 20s: 1 per sec
+        let beepPitch = 1000;
+
+        if (GAME_STATE.spikeTimer <= 1.0) {
+            interval = 0.05; // Fast continuous buzz
+            beepPitch = 1800; // continuous high pitch
+        } else if (GAME_STATE.spikeTimer <= 5.0) {
+            interval = 1.0 / 7.0; // 5s to 1s: 7 per sec (approx 0.14s)
+            beepPitch = 1500;
+        } else if (GAME_STATE.spikeTimer <= 10.0) {
+            interval = 0.25; // 10s to 5s: 4 per sec
+            beepPitch = 1300;
+        } else if (GAME_STATE.spikeTimer <= 20.0) {
+            interval = 0.5; // 20s to 10s: 2 per sec
+            beepPitch = 1100;
+        }
+
+        // Check if it is time to play the beep
+        const now = clock.getElapsedTime();
+        if (now >= GAME_STATE.nextBeepTime) {
+            if (GAME_STATE.spikeTimer <= 1.0) {
+                AudioSynth.playSpikeBeep(2000);
+            } else {
+                AudioSynth.playSpikeBeep(beepPitch);
+            }
+            GAME_STATE.nextBeepTime = now + interval;
+        }
+
+        // Update timer HUD
+        const showTime = Math.max(0, Math.ceil(GAME_STATE.spikeTimer));
+        document.getElementById('hud-timer').innerText = "SPIK: " + showTime + "s";
+
+        if (GAME_STATE.spikeTimer <= 0) {
+            // Explode!
+            spikeExplode();
+        }
     }
 }
 
@@ -2331,35 +2827,11 @@ function createSpike3D(pos) {
 }
 
 function startSpikeCountdown() {
-    GAME_STATE.spikeTimer = 45;
-
-    let tick = 0;
-    GAME_STATE.spikeTimerInterval = setInterval(() => {
-        GAME_STATE.spikeTimer--;
-        tick++;
-
-        // Procedural Audio Beeping (increases in speed as timer gets lower)
-        let rate = 'spike_beep';
-        if (GAME_STATE.spikeTimer < 15) {
-            rate = 'spike_beep_fast';
-        }
-        AudioSynth.play(rate);
-
-        // Update timer HUD
-        document.getElementById('hud-timer').innerText = "SPIK: " + GAME_STATE.spikeTimer + "s";
-
-        if (GAME_STATE.spikeTimer <= 0) {
-            // Explode!
-            clearInterval(GAME_STATE.spikeTimerInterval);
-            spikeExplode();
-        }
-    }, 1000);
+    GAME_STATE.spikeTimer = 45.0; // Float countdown
+    GAME_STATE.nextBeepTime = 0; // Trigger beep instantly
 }
 
 function stopSpikeCountdown() {
-    if (GAME_STATE.spikeTimerInterval) {
-        clearInterval(GAME_STATE.spikeTimerInterval);
-    }
     document.getElementById('hud-timer').innerText = "02:00";
 }
 
@@ -2402,8 +2874,45 @@ function spikeExplode() {
     }
 
     GAME_STATE.roundsLost++;
-    showNotificationBanner("SPIKE EXPLODED // SITE LOST", "lose");
+    addRoundCredits(false);
+    triggerCustomWinBanner(false);
     resetSpikeScenarioDelay();
+}
+
+function triggerCustomWinBanner(isWin) {
+    let title = "ROUND WON";
+    let subtitle = "VICTORY";
+    let bannerType = "win";
+
+    if (isWin) {
+        // Evaluate achievements
+        if (GAME_STATE.killsInRound >= 4 || GAME_STATE.kills >= 4) {
+            title = "ACE";
+            subtitle = "YOU ELIMINATED EVERYONE!";
+        } else if (GAME_STATE.playerHP === 100 && GAME_STATE.playerShield === 50) {
+            title = "FLAWLESS";
+            subtitle = "PERFECT ROUND - NO DAMAGE TAKEN";
+        } else if (GAME_STATE.playerHP <= 25) {
+            title = "CLUTCH";
+            subtitle = "WON AGAINST THE ODDS";
+        } else if (GAME_STATE.currentWeapon === "sheriff") {
+            title = "THRIFTY";
+            subtitle = "WON WITH LOW BUY LOADOUT";
+        } else {
+            title = "VICTORY";
+            subtitle = "ROUND WON";
+        }
+    } else {
+        title = "DEFEAT";
+        subtitle = "SPIKE EXPLODED // SITE LOST";
+        bannerType = "lose";
+    }
+
+    // Reset round-specific counters
+    GAME_STATE.killsInRound = 0;
+
+    // Show on notification banner
+    showNotificationBanner(`${title} // ${subtitle}`, bannerType);
 }
 
 function resetSpikeScenarioDelay() {
@@ -2442,6 +2951,13 @@ function updateHUD() {
     const stats = WEAPONS_STATS[GAME_STATE.currentWeapon];
     document.getElementById('hud-weapon-name').innerText = stats.name.toUpperCase();
 
+    // Credits
+    const hudCredits = document.getElementById('hud-credits');
+    if (hudCredits) hudCredits.innerText = "¤" + GAME_STATE.credits;
+
+    const buyCredits = document.getElementById('buy-menu-credits');
+    if (buyCredits) buyCredits.innerText = "¤" + GAME_STATE.credits;
+
     // Update Ability dots
     updateAbilityHUD('c');
     updateAbilityHUD('q');
@@ -2465,6 +2981,26 @@ function updateAbilityHUD(key) {
         slot.classList.add('cooldown');
     } else {
         slot.classList.remove('cooldown');
+    }
+}
+
+function updateScoreboard() {
+    const playerRow = document.getElementById('score-row-player');
+    if (playerRow) {
+        playerRow.innerHTML = `
+            <span class="col-agent">${GAME_STATE.selectedAgent.toUpperCase()}</span>
+            <span class="col-name">Player (You)</span>
+            <span class="col-weapon">${WEAPONS_STATS[GAME_STATE.currentWeapon].name}</span>
+            <span class="col-kda">${GAME_STATE.kills} / ${GAME_STATE.deaths} / 0</span>
+            <span class="col-credits">¤${GAME_STATE.credits}</span>
+        `;
+    }
+
+    // Update header round info
+    const roundInfo = document.getElementById('scoreboard-round-info');
+    if (roundInfo) {
+        const roundNum = GAME_STATE.roundsWon + GAME_STATE.roundsLost + 1;
+        roundInfo.innerText = `ROUND ${roundNum} // SITE DEFUSAL`;
     }
 }
 
@@ -2572,10 +3108,23 @@ function initInputs() {
         if (e.code === 'KeyC') useAbility('c');
         if (e.code === 'KeyQ') useAbility('q');
         if (e.code === 'KeyE') useAbility('e');
+
+        if (e.code === 'Tab') {
+            e.preventDefault();
+            updateScoreboard();
+            const sb = document.getElementById('scoreboard-overlay');
+            if (sb) sb.style.display = 'flex';
+        }
     });
 
     window.addEventListener('keyup', (e) => {
         keys[e.code] = false;
+
+        if (e.code === 'Tab') {
+            e.preventDefault();
+            const sb = document.getElementById('scoreboard-overlay');
+            if (sb) sb.style.display = 'none';
+        }
     });
 
     // Mouse Pointer Lock
@@ -2734,10 +3283,21 @@ function toggleBuyMenu() {
 }
 
 function selectWeapon(weaponId, closeMenu = false) {
+    const stats = WEAPONS_STATS[weaponId];
+    const cost = stats.cost || 0;
+
+    // If purchasing from buy menu, check credits
+    if (closeMenu) {
+        if (GAME_STATE.credits < cost) {
+            showNotificationBanner("NOT ENOUGH CREDITS", "lose");
+            return;
+        }
+        GAME_STATE.credits -= cost;
+    }
+
     GAME_STATE.currentWeapon = weaponId;
 
     // Set ammo values
-    const stats = WEAPONS_STATS[weaponId];
     GAME_STATE.ammoClip = stats.clipSize;
     GAME_STATE.ammoReserve = stats.reserveSize;
 
@@ -2978,23 +3538,103 @@ window.addEventListener('load', () => {
     mapCanvas.width = 150;
     mapCanvas.height = 150;
 
-    // Start Button Action
-    document.getElementById('start-btn').addEventListener('click', () => {
-        // Trigger Audio init context on click gesture
-        AudioSynth.init();
+    let selectedAgent = "jett";
+    let agentTimerVal = 80;
+    let agentTimerInterval = null;
 
+    function renderAgentAbilities(agentId) {
+        const agent = AGENTS_DATA[agentId];
+        document.getElementById('selected-agent-name').innerText = agent.name;
+        document.getElementById('selected-agent-desc').innerText = agent.desc;
+
+        const abilitiesGrid = document.getElementById('selected-agent-abilities');
+        abilitiesGrid.innerHTML = '';
+
+        for (const [key, ab] of Object.entries(agent.abilities)) {
+            abilitiesGrid.innerHTML += `
+                <div class="ability-info-item">
+                    <div class="ability-info-key">${key.toUpperCase()} - ${ab.name}</div>
+                    <div class="ability-info-desc">${ab.desc}</div>
+                </div>
+            `;
+        }
+    }
+
+    // Default select Jett
+    renderAgentAbilities("jett");
+
+    // Agent Grid click
+    document.querySelectorAll('.agent-card').forEach(card => {
+        card.addEventListener('click', () => {
+            selectedAgent = card.dataset.agent;
+            document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            renderAgentAbilities(selectedAgent);
+            AudioSynth.playReloadBolt(); // tiny sound cue
+        });
+    });
+
+    // Start Button Action -> Open Agent Selection
+    document.getElementById('start-btn').addEventListener('click', () => {
+        AudioSynth.init();
         document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('agent-select-screen').style.display = 'flex';
+
+        // Start countdown
+        agentTimerVal = 80;
+        document.getElementById('agent-select-timer').innerText = agentTimerVal;
+
+        agentTimerInterval = setInterval(() => {
+            agentTimerVal--;
+            document.getElementById('agent-select-timer').innerText = agentTimerVal;
+
+            // Play a tick sound every second!
+            AudioSynth.playSpikeBeep(800);
+
+            if (agentTimerVal <= 0) {
+                clearInterval(agentTimerInterval);
+                lockInAgent(selectedAgent);
+            }
+        }, 1000);
+    });
+
+    // Lock in Button Action
+    document.getElementById('lock-in-btn').addEventListener('click', () => {
+        clearInterval(agentTimerInterval);
+        lockInAgent(selectedAgent);
+    });
+
+    function lockInAgent(agentId) {
+        GAME_STATE.selectedAgent = agentId;
+        GAME_STATE.agentLocked = true;
+
+        // Apply agent-specific abilities configuration
+        const agent = AGENTS_DATA[agentId];
+
+        // Setup HUD abilities icons
+        document.getElementById('ability-c').querySelector('.ability-icon').innerText = agent.abilities.c.name[0];
+        document.getElementById('ability-q').querySelector('.ability-icon').innerText = agent.abilities.q.name[0];
+        document.getElementById('ability-e').querySelector('.ability-icon').innerText = agent.abilities.e.name[0];
+
+        // Configure charges
+        GAME_STATE.abilities.c.charges = agent.abilities.c.maxCharges;
+        GAME_STATE.abilities.c.maxCharges = agent.abilities.c.maxCharges;
+        GAME_STATE.abilities.q.charges = agent.abilities.q.maxCharges;
+        GAME_STATE.abilities.q.maxCharges = agent.abilities.q.maxCharges;
+        GAME_STATE.abilities.e.charges = agent.abilities.e.maxCharges;
+        GAME_STATE.abilities.e.maxCharges = agent.abilities.e.maxCharges;
+
+        // Transition screens
+        document.getElementById('agent-select-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
 
-        // Set default gun model setup
-        selectWeapon('vandal');
+        // Set default weapon and play audio fan-fare!
+        selectWeapon('sheriff'); // Starting weapon
+        AudioSynth.play('kill_banner');
 
-        // Respawn / Spawn bots
         respawnPlayer();
-
-        // Start Core loop
         gameLoop();
-    });
+    }
 
     // Respawn Action
     document.getElementById('respawn-btn').addEventListener('click', () => {
