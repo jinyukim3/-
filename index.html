@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALORANT Web - 3D FPS Tactical Shooter</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f1923; color: #fff; }
+
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* UI Overlays */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
+        .interactive { pointer-events: auto; }
+
+        /* Crosshair */
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 12px; height: 12px; pointer-events: none; z-index: 12;
+        }
+        #crosshair::before, #crosshair::after {
+            content: ''; position: absolute; background: #00ffaa;
+        }
+        #crosshair::before { top: 4px; left: 0; width: 12px; height: 2px; }
+        #crosshair::after { top: 0; left: 4px; width: 2px; height: 12px; }
+        #crosshair-dot { position: absolute; top: 5px; left: 5px; width: 2px; height: 2px; background: #00ffaa; }
+
+        /* Top Bar & Round Info */
+        #top-bar {
+            display: flex; justify-content: center; align-items: center; gap: 20px;
+            padding-top: 15px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .score-box {
+            background: rgba(15, 25, 35, 0.85); border: 2px solid #ff4655; padding: 8px 20px;
+            font-size: 24px; border-radius: 4px; display: flex; gap: 15px; align-items: center;
+        }
+        .score-defenders { color: #00f3ff; }
+        .score-attackers { color: #ff4655; }
+        #round-timer { font-size: 28px; color: #ece8e1; font-family: monospace; }
+        #round-phase { font-size: 14px; text-transform: uppercase; color: #ff4655; letter-spacing: 2px; text-align: center; }
+
+        /* Killfeed */
+        #killfeed {
+            position: absolute; top: 20px; right: 20px; width: 300px;
+            display: flex; flex-direction: column; gap: 6px; z-index: 15;
+        }
+        .kill-item {
+            background: rgba(15, 25, 35, 0.9); border-left: 4px solid #ff4655;
+            padding: 6px 12px; font-size: 13px; border-radius: 2px;
+            display: flex; justify-content: space-between; align-items: center;
+            animation: fadeOut 5s forwards;
+        }
+        @keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* Minimap */
+        #minimap-container {
+            position: absolute; top: 20px; left: 20px; width: 160px; height: 160px;
+            background: rgba(15, 25, 35, 0.85); border: 2px solid #ece8e1; border-radius: 50%;
+            overflow: hidden; z-index: 15;
+        }
+        #minimap-canvas { width: 100%; height: 100%; }
+
+        /* Bottom HUD */
+        #bottom-hud {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding: 20px 40px; width: 100%; background: linear-gradient(to top, rgba(15,25,35,0.9), transparent);
+        }
+        .hud-group { display: flex; align-items: center; gap: 15px; }
+
+        /* Health & Shield */
+        .stat-box { background: rgba(15, 25, 35, 0.85); padding: 10px 18px; border-radius: 4px; border-bottom: 3px solid #00f3ff; }
+        .stat-label { font-size: 11px; text-transform: uppercase; color: #8b978f; letter-spacing: 1px; }
+        .stat-value { font-size: 28px; font-weight: bold; color: #ece8e1; }
+
+        /* Abilities HUD */
+        #abilities-container { display: flex; gap: 10px; }
+        .ability-card {
+            width: 55px; height: 65px; background: rgba(15, 25, 35, 0.85);
+            border: 1px solid #444; border-radius: 4px; display: flex;
+            flex-direction: column; justify-content: space-between; align-items: center;
+            padding: 5px; position: relative;
+        }
+        .ability-card.ready { border-color: #00f3ff; }
+        .ability-key { font-size: 11px; font-weight: bold; color: #ff4655; background: rgba(255,70,85,0.2); padding: 1px 5px; border-radius: 2px; }
+        .ability-name { font-size: 10px; text-align: center; color: #ece8e1; }
+        .ability-charges { font-size: 10px; color: #00f3ff; }
+
+        /* Ammo & Weapon */
+        .weapon-box { text-align: right; background: rgba(15, 25, 35, 0.85); padding: 10px 20px; border-radius: 4px; border-bottom: 3px solid #ff4655; }
+        #weapon-name { font-size: 14px; text-transform: uppercase; color: #8b978f; }
+        #ammo-display { font-size: 32px; font-weight: bold; color: #ece8e1; }
+
+        /* Plant / Defuse Progress Bar */
+        #interaction-bar-container {
+            position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%);
+            width: 300px; text-align: center; display: none; z-index: 20;
+        }
+        #interaction-label { font-size: 14px; letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase; font-weight: bold; color: #00f3ff; }
+        .progress-bg { width: 100%; height: 12px; background: rgba(0,0,0,0.7); border: 1px solid #00f3ff; border-radius: 6px; overflow: hidden; position: relative; }
+        #progress-fill { height: 100%; width: 0%; background: #00f3ff; transition: width 0.1s linear; }
+        #half-checkpoint { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 2; display: none; }
+
+        /* Screen Flash / Effects */
+        #flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 30; transition: opacity 0.1s ease-out; }
+        #damage-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; box-shadow: inset 0 0 50px rgba(255,0,0,0.6); opacity: 0; pointer-events: none; z-index: 29; transition: opacity 0.2s ease; }
+
+        /* Agent Selection Screen */
+        #agent-select-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 25, 35, 0.96); z-index: 100; display: flex;
+            flex-direction: column; justify-content: center; align-items: center; gap: 30px;
+        }
+        #agent-select-screen h1 { font-size: 42px; color: #ff4655; letter-spacing: 4px; text-transform: uppercase; }
+        .agent-grid { display: flex; gap: 20px; }
+        .agent-card {
+            width: 180px; height: 260px; background: #1f2326; border: 2px solid #333;
+            border-radius: 8px; padding: 15px; cursor: pointer; transition: all 0.2s ease;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+        }
+        .agent-card:hover, .agent-card.selected { border-color: #ff4655; transform: translateY(-5px); background: #2a2e33; }
+        .agent-avatar { width: 80px; height: 80px; border-radius: 50%; background: #ff4655; display: flex; justify-content: center; align-items: center; font-size: 36px; font-weight: bold; }
+        .agent-title { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+        .agent-role { font-size: 12px; color: #00f3ff; text-transform: uppercase; }
+        #lock-in-btn {
+            padding: 14px 40px; font-size: 18px; font-weight: bold; background: #ff4655;
+            color: #fff; border: none; border-radius: 4px; cursor: pointer; text-transform: uppercase;
+            letter-spacing: 2px; transition: background 0.2s;
+        }
+        #lock-in-btn:hover { background: #e03e4d; }
+
+        /* Buy Menu */
+        #buy-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 25, 35, 0.92); z-index: 90; display: none;
+            flex-direction: column; padding: 40px; justify-content: space-between;
+        }
+        .buy-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; }
+        .buy-credits { font-size: 32px; color: #00f3ff; font-weight: bold; }
+        .buy-columns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 20px; height: 100%; }
+        .buy-category { background: rgba(31, 35, 38, 0.8); border-radius: 6px; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .buy-category h3 { font-size: 16px; color: #8b978f; text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 6px; }
+        .buy-item {
+            background: #19222a; border: 1px solid #333; padding: 12px; border-radius: 4px;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;
+        }
+        .buy-item:hover { border-color: #00f3ff; background: #222d37; }
+        .buy-item-name { font-weight: bold; }
+        .buy-item-price { color: #00f3ff; font-size: 14px; }
+
+        /* Scoreboard */
+        #scoreboard {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 750px; background: rgba(15, 25, 35, 0.95); border: 2px solid #ff4655;
+            border-radius: 6px; padding: 20px; z-index: 95; display: none; flex-direction: column; gap: 15px;
+        }
+        .score-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .score-table th, .score-table td { padding: 10px; text-align: left; border-bottom: 1px solid #2a2e33; }
+        .score-table th { color: #8b978f; text-transform: uppercase; font-size: 12px; }
+        .team-defenders { color: #00f3ff; font-weight: bold; }
+        .team-attackers { color: #ff4655; font-weight: bold; }
+
+        /* Start Screen overlay click */
+        #click-prompt {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); color: #fff; z-index: 80; display: none;
+            flex-direction: column; justify-content: center; align-items: center; gap: 15px;
+        }
+        #click-prompt h2 { font-size: 32px; letter-spacing: 2px; }
+    </style>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlays -->
+    <div class="overlay">
+        <!-- Top Bar -->
+        <div id="top-bar">
+            <div class="score-box">
+                <span class="score-defenders" id="score-defenders">0</span>
+                <span>:</span>
+                <span class="score-attackers" id="score-attackers">0</span>
+            </div>
+            <div>
+                <div id="round-timer">1:40</div>
+                <div id="round-phase">BUY PHASE</div>
+            </div>
+        </div>
+
+        <!-- Minimap -->
+        <div id="minimap-container">
+            <canvas id="minimap-canvas" width="160" height="160"></canvas>
+        </div>
+
+        <!-- Killfeed -->
+        <div id="killfeed"></div>
+
+        <!-- Crosshair -->
+        <div id="crosshair"><div id="crosshair-dot"></div></div>
+
+        <!-- Interaction / Plant Progress -->
+        <div id="interaction-bar-container">
+            <div id="interaction-label">PLANTING SPIKE</div>
+            <div class="progress-bg">
+                <div id="half-checkpoint"></div>
+                <div id="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Bottom HUD -->
+        <div id="bottom-hud">
+            <div class="hud-group">
+                <div class="stat-box">
+                    <div class="stat-label">HEALTH</div>
+                    <div class="stat-value" id="hp-value">100</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">SHIELD</div>
+                    <div class="stat-value" id="shield-value">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">CREDITS</div>
+                    <div class="stat-value" id="credits-value">800</div>
+                </div>
+            </div>
+
+            <div id="abilities-container">
+                <!-- Dynamically populated based on chosen Agent -->
+            </div>
+
+            <div class="weapon-box">
+                <div id="weapon-name">CLASSIC</div>
+                <div id="ammo-display">12 / 36</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen Flash overlays -->
+    <div id="flash-overlay"></div>
+    <div id="damage-overlay"></div>
+
+    <!-- Click Prompt for Pointer Lock -->
+    <div id="click-prompt" class="interactive">
+        <h2>CLICK ANYWHERE TO RESUME GAMEPLAY</h2>
+        <p>Press [ESC] to release mouse, [B] for Buy Menu, [TAB] for Scoreboard</p>
+    </div>
+
+    <!-- Agent Selection Screen -->
+    <div id="agent-select-screen" class="interactive">
+        <h1>SELECT YOUR AGENT</h1>
+        <div class="agent-grid">
+            <div class="agent-card selected" onclick="selectAgent(this, 'jett')">
+                <div class="agent-avatar">J</div>
+                <div class="agent-title">Jett</div>
+                <div class="agent-role">Duelist</div>
+            </div>
+            <div class="agent-card" onclick="selectAgent(this, 'sage')">
+                <div class="agent-avatar" style="background:#00f3ff;">S</div>
+                <div class="agent-title">Sage</div>
+                <div class="agent-role">Sentinel</div>
+            </div>
+            <div class="agent-card" onclick="selectAgent(this, 'phoenix')">
+                <div class="agent-avatar" style="background:#ff9900;">P</div>
+                <div class="agent-title">Phoenix</div>
+                <div class="agent-role">Duelist</div>
+            </div>
+            <div class="agent-card" onclick="selectAgent(this, 'reyna')">
+                <div class="agent-avatar" style="background:#a000ff;">R</div>
+                <div class="agent-title">Reyna</div>
+                <div class="agent-role">Duelist</div>
+            </div>
+        </div>
+        <button id="lock-in-btn" onclick="lockInAgent()">LOCK IN</button>
+    </div>
+
+    <!-- Buy Menu -->
+    <div id="buy-menu" class="interactive">
+        <div class="buy-header">
+            <h2>BUY MENU - PRESS [B] TO CLOSE</h2>
+            <div class="buy-credits">CREDITS: <span id="buy-credits-val">800</span></div>
+        </div>
+        <div class="buy-columns">
+            <div class="buy-category">
+                <h3>Sidearms</h3>
+                <div class="buy-item" onclick="buyWeapon('classic')">
+                    <span class="buy-item-name">Classic</span>
+                    <span class="buy-item-price">FREE</span>
+                </div>
+                <div class="buy-item" onclick="buyWeapon('ghost')">
+                    <span class="buy-item-name">Ghost</span>
+                    <span class="buy-item-price">500</span>
+                </div>
+                <div class="buy-item" onclick="buyWeapon('sheriff')">
+                    <span class="buy-item-name">Sheriff</span>
+                    <span class="buy-item-price">800</span>
+                </div>
+            </div>
+            <div class="buy-category">
+                <h3>Primary Weapons</h3>
+                <div class="buy-item" onclick="buyWeapon('spectre')">
+                    <span class="buy-item-name">Spectre (SMG)</span>
+                    <span class="buy-item-price">1600</span>
+                </div>
+                <div class="buy-item" onclick="buyWeapon('phantom')">
+                    <span class="buy-item-name">Phantom (Rifle)</span>
+                    <span class="buy-item-price">2900</span>
+                </div>
+                <div class="buy-item" onclick="buyWeapon('vandal')">
+                    <span class="buy-item-name">Vandal (Rifle)</span>
+                    <span class="buy-item-price">2900</span>
+                </div>
+                <div class="buy-item" onclick="buyWeapon('operator')">
+                    <span class="buy-item-name">Operator (Sniper)</span>
+                    <span class="buy-item-price">4700</span>
+                </div>
+            </div>
+            <div class="buy-category">
+                <h3>Armor</h3>
+                <div class="buy-item" onclick="buyArmor('light')">
+                    <span class="buy-item-name">Light Shield (+25)</span>
+                    <span class="buy-item-price">400</span>
+                </div>
+                <div class="buy-item" onclick="buyArmor('heavy')">
+                    <span class="buy-item-name">Heavy Shield (+50)</span>
+                    <span class="buy-item-price">1000</span>
+                </div>
+            </div>
+            <div class="buy-category">
+                <h3>Abilities</h3>
+                <div class="buy-item" onclick="buyAbility('C')">
+                    <span class="buy-item-name" id="buy-c-name">C Ability</span>
+                    <span class="buy-item-price" id="buy-c-price">200</span>
+                </div>
+                <div class="buy-item" onclick="buyAbility('Q')">
+                    <span class="buy-item-name" id="buy-q-name">Q Ability</span>
+                    <span class="buy-item-price" id="buy-q-price">200</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div id="scoreboard" class="interactive">
+        <h2 style="text-align: center; color: #ece8e1;">SCOREBOARD</h2>
+        <table class="score-table">
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>Name</th>
+                    <th>Team</th>
+                    <th>Weapon</th>
+                    <th>K / D / A</th>
+                    <th>Credits</th>
+                </tr>
+            </thead>
+            <tbody id="scoreboard-body">
+                <!-- Dynamically generated rows -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        /* --- Web Audio API Procedural Sound Engine --- */
+        class AudioEngine {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            ensureContext() {
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playShootSound(weaponType) {
+                this.ensureContext();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (weaponType === 'operator') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+                    gain.gain.setValueAtTime(0.8, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (weaponType === 'vandal' || weaponType === 'phantom') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+                    gain.gain.setValueAtTime(0.5, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (weaponType === 'sheriff' || weaponType === 'ghost') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.12);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else { // Classic / Spectre
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                }
+            }
+
+            playHeadshotSound() {
+                this.ensureContext();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, now);
+                osc.frequency.exponentialRampToValueAtTime(2400, now + 0.1);
+                gain.gain.setValueAtTime(0.6, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+
+            playSpikeBeep(pitchMultiplier = 1.0) {
+                this.ensureContext();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880 * pitchMultiplier, now);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+
+            playDefuseAlert() {
+                this.ensureContext();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.linearRampToValueAtTime(880, now + 0.2);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+
+            playAbilitySound(type) {
+                this.ensureContext();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        const audio = new AudioEngine();
+
+        /* --- Game Data & State --- */
+        const AGENT_DATA = {
+            jett: {
+                name: "Jett",
+                role: "Duelist",
+                abilities: {
+                    C: { name: "Cloudburst", price: 200, maxCharges: 2, icon: "☁️" },
+                    Q: { name: "Updraft", price: 150, maxCharges: 2, icon: "🌪️" },
+                    E: { name: "Tailwind", price: 0, maxCharges: 1, icon: "⚡" }
+                }
+            },
+            sage: {
+                name: "Sage",
+                role: "Sentinel",
+                abilities: {
+                    C: { name: "Barrier Wall", price: 400, maxCharges: 1, icon: "🧊" },
+                    Q: { name: "Slow Orb", price: 200, maxCharges: 2, icon: "❄️" },
+                    E: { name: "Healing Orb", price: 0, maxCharges: 1, icon: "💚" }
+                }
+            },
+            phoenix: {
+                name: "Phoenix",
+                role: "Duelist",
+                abilities: {
+                    C: { name: "Blaze Wall", price: 200, maxCharges: 1, icon: "🔥" },
+                    Q: { name: "Curveball", price: 250, maxCharges: 2, icon: "✨" },
+                    E: { name: "Hot Hands", price: 0, maxCharges: 1, icon: "💥" }
+                }
+            },
+            reyna: {
+                name: "Reyna",
+                role: "Duelist",
+                abilities: {
+                    C: { name: "Leer Eye", price: 250, maxCharges: 2, icon: "👁️" },
+                    Q: { name: "Devour", price: 200, maxCharges: 2, icon: "💜" },
+                    E: { name: "Dismiss", price: 0, maxCharges: 1, icon: "👻" }
+                }
+            }
+        };
+
+        const WEAPON_DATA = {
+            classic: { name: "Classic", category: "sidearm", price: 0, damage: 26, headshotMult: 3, ammoMax: 12, reserveMax: 36, fireRate: 250 },
+            ghost: { name: "Ghost", category: "sidearm", price: 500, damage: 30, headshotMult: 3.5, ammoMax: 15, reserveMax: 45, fireRate: 200 },
+            sheriff: { name: "Sheriff", category: "sidearm", price: 800, damage: 55, headshotMult: 3.2, ammoMax: 6, reserveMax: 24, fireRate: 400 },
+            spectre: { name: "Spectre", category: "primary", price: 1600, damage: 26, headshotMult: 3, ammoMax: 30, reserveMax: 90, fireRate: 90 },
+            phantom: { name: "Phantom", category: "primary", price: 2900, damage: 39, headshotMult: 3.5, ammoMax: 30, reserveMax: 90, fireRate: 100 },
+            vandal: { name: "Vandal", category: "primary", price: 2900, damage: 40, headshotMult: 4, ammoMax: 25, reserveMax: 75, fireRate: 110 },
+            operator: { name: "Operator", category: "primary", price: 4700, damage: 150, headshotMult: 1.7, ammoMax: 5, reserveMax: 10, fireRate: 1200 }
+        };
+
+        let selectedAgentKey = 'jett';
+        let playerState = {
+            agent: 'jett',
+            hp: 100,
+            maxHp: 100,
+            shield: 0,
+            credits: 800,
+            sidearm: 'classic',
+            primary: null,
+            activeSlot: 'sidearm', // 'sidearm', 'primary', 'spike'
+            ammo: { classic: 12, ghost: 15, sheriff: 6, spectre: 30, phantom: 30, vandal: 25, operator: 5 },
+            reserve: { classic: 36, ghost: 45, sheriff: 24, spectre: 90, phantom: 90, vandal: 75, operator: 10 },
+            abilities: { C: 1, Q: 1, E: 1 },
+            hasSpike: false,
+            kills: 0, deaths: 0, assists: 0,
+            isDefending: false // Defenders vs Attackers
+        };
+
+        let gameState = {
+            phase: 'AGENT_SELECT', // AGENT_SELECT, BUY, ACTION, END
+            roundTimer: 100,
+            timerInterval: null,
+            scoreDefenders: 0,
+            scoreAttackers: 0,
+            spikePlanted: false,
+            spikePosition: null,
+            spikeTimer: 45,
+            spikeDefuseProgress: 0,
+            spikeHalfCheckpointReached: false,
+            spikeMesh: null,
+            buyPhaseBarrierMesh: null,
+            consecutiveLosses: 0
+        };
+
+        /* --- Three.js Setup --- */
+        let scene, camera, renderer;
+        let playerMesh, cameraContainer;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isJumping = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let prevTime = performance.now();
+        let yaw = 0, pitch = 0;
+        let viewmodelWeaponMesh;
+
+        let bots = [];
+        let mapColliders = [];
+        let siteAZone, siteBZone;
+
+        function initEngine() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb); // Sky blue
+            scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            cameraContainer = new THREE.Group();
+            cameraContainer.position.set(0, 1.6, 25); // Start in Defender spawn
+            cameraContainer.add(camera);
+            scene.add(cameraContainer);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+
+            buildValorantMap();
+            createViewmodel();
+
+            window.addEventListener('resize', onWindowResize);
+            setupPointerLock();
+            setupInputListeners();
+
+            animate();
+        }
+
+        /* --- Map Builder --- */
+        function buildValorantMap() {
+            // Floor / Ground
+            const floorGeo = new THREE.PlaneGeometry(120, 120);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x2e3944, roughness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Outer Walls
+            createWall(0, 5, -60, 120, 10, 2, 0x1c252e); // North
+            createWall(0, 5, 60, 120, 10, 2, 0x1c252e);  // South
+            createWall(-60, 5, 0, 2, 10, 120, 0x1c252e); // West
+            createWall(60, 5, 0, 2, 10, 120, 0x1c252e);  // East
+
+            // Mid Structure & Buildings
+            createWall(-15, 4, 0, 10, 8, 40, 0x3a4754); // Mid West Wall
+            createWall(15, 4, 0, 10, 8, 40, 0x3a4754);  // Mid East Wall
+
+            // A Site Structure (West - North)
+            createWall(-40, 4, -30, 20, 8, 20, 0x4f5b66);
+            siteAZone = { x: -40, z: -40, radius: 10 };
+            createPlantSiteOutline(-40, -40, 0xff4655, 'A');
+
+            // B Site Structure (East - North)
+            createWall(40, 4, -30, 20, 8, 20, 0x4f5b66);
+            siteBZone = { x: 40, z: -40, radius: 10 };
+            createPlantSiteOutline(40, -40, 0x00f3ff, 'B');
+
+            // Cover Boxes / Crates
+            createCrate(-35, 1.5, -35, 3, 3, 3);
+            createCrate(-42, 1.5, -42, 3, 3, 3);
+            createCrate(38, 1.5, -38, 3, 3, 3);
+            createCrate(0, 1.5, 0, 4, 3, 4); // Mid cover crate
+
+            // Buy Phase Barrier (at z = 0)
+            const barrierGeo = new THREE.BoxGeometry(120, 12, 1);
+            const barrierMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.3, wireframe: true });
+            gameState.buyPhaseBarrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
+            gameState.buyPhaseBarrierMesh.position.set(0, 6, 0);
+            scene.add(gameState.buyPhaseBarrierMesh);
+        }
+
+        function createWall(x, y, z, w, h, d, color) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            mapColliders.push(new THREE.Box3().setFromObject(mesh));
+            return mesh;
+        }
+
+        function createCrate(x, y, z, w, h, d) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xc29b62, roughness: 0.5 }); // Wooden crate
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            mapColliders.push(new THREE.Box3().setFromObject(mesh));
+        }
+
+        function createPlantSiteOutline(x, z, colorHex, siteName) {
+            const geo = new THREE.RingGeometry(8, 8.5, 32);
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide });
+            const ring = new THREE.Mesh(geo, mat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.set(x, 0.02, z);
+            scene.add(ring);
+        }
+
+        /* --- Viewmodel (Weapon in Hand) --- */
+        function createViewmodel() {
+            viewmodelWeaponMesh = new THREE.Group();
+
+            const bodyGeo = new THREE.BoxGeometry(0.12, 0.15, 0.6);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+
+            const barrelGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.4);
+            const barrelMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 });
+            const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position.set(0, 0.02, -0.4);
+
+            viewmodelWeaponMesh.add(body);
+            viewmodelWeaponMesh.add(barrel);
+
+            viewmodelWeaponMesh.position.set(0.3, -0.25, -0.5);
+            camera.add(viewmodelWeaponMesh);
+        }
+
+        /* --- Agent Selection Logic --- */
+        function selectAgent(cardElement, agentKey) {
+            selectedAgentKey = agentKey;
+            document.querySelectorAll('.agent-card').forEach(card => card.classList.remove('selected'));
+            if (cardElement) {
+                cardElement.classList.add('selected');
+            }
+        }
+
+        function lockInAgent() {
+            playerState.agent = selectedAgentKey;
+            document.getElementById('agent-select-screen').style.display = 'none';
+
+            setupAbilitiesHUD();
+            startNewRound(true);
+            requestPointerLock();
+        }
+
+        function setupAbilitiesHUD() {
+            const container = document.getElementById('abilities-container');
+            container.innerHTML = '';
+            const abilities = AGENT_DATA[playerState.agent].abilities;
+
+            for (const [key, info] of Object.entries(abilities)) {
+                const card = document.createElement('div');
+                card.className = `ability-card ${playerState.abilities[key] > 0 ? 'ready' : ''}`;
+                card.id = `ability-card-${key}`;
+                card.innerHTML = `
+                    <div class="ability-key">${key}</div>
+                    <div style="font-size: 18px;">${info.icon}</div>
+                    <div class="ability-name">${info.name}</div>
+                    <div class="ability-charges" id="ability-charge-${key}">${playerState.abilities[key]}/${info.maxCharges}</div>
+                `;
+                container.appendChild(card);
+            }
+
+            // Update Buy Menu Ability names
+            document.getElementById('buy-c-name').innerText = abilities.C.name;
+            document.getElementById('buy-c-price').innerText = abilities.C.price;
+            document.getElementById('buy-q-name').innerText = abilities.Q.name;
+            document.getElementById('buy-q-price').innerText = abilities.Q.price;
+        }
+
+        /* --- Pointer Lock & Controls --- */
+        function setupPointerLock() {
+            const clickPrompt = document.getElementById('click-prompt');
+
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === document.body) {
+                    clickPrompt.style.display = 'none';
+                } else {
+                    if (gameState.phase !== 'AGENT_SELECT') {
+                        clickPrompt.style.display = 'flex';
+                    }
+                }
+            });
+
+            clickPrompt.addEventListener('click', () => {
+                requestPointerLock();
+            });
+        }
+
+        function requestPointerLock() {
+            document.body.requestPointerLock();
+        }
+
+        function setupInputListeners() {
+            document.addEventListener('mousemove', (e) => {
+                if (document.pointerLockElement !== document.body) return;
+
+                const movementX = e.movementX || 0;
+                const movementY = e.movementY || 0;
+
+                yaw -= movementX * 0.002;
+                pitch -= movementY * 0.002;
+
+                pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
+
+                cameraContainer.rotation.y = yaw;
+                camera.rotation.x = pitch;
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (gameState.phase === 'AGENT_SELECT') return;
+
+                switch (e.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': if (!isJumping) { velocity.y += 6.5; isJumping = true; } break;
+                    case 'KeyB': toggleBuyMenu(); break;
+                    case 'Tab': showScoreboard(true); e.preventDefault(); break;
+                    case 'KeyR': reloadWeapon(); break;
+                    case 'Digit1': switchWeaponSlot('primary'); break;
+                    case 'Digit2': switchWeaponSlot('sidearm'); break;
+                    case 'Digit4': equipSpike(); checkPlantDefuse(); break;
+                    case 'KeyC': useAbility('C'); break;
+                    case 'KeyQ': useAbility('Q'); break;
+                    case 'KeyE': useAbility('E'); break;
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                switch (e.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                    case 'Tab': showScoreboard(false); break;
+                }
+            });
+
+            document.addEventListener('mousedown', (e) => {
+                if (document.pointerLockElement === document.body && e.button === 0) {
+                    if (playerState.activeSlot === 'spike') {
+                        checkPlantDefuse();
+                    } else {
+                        handlePrimaryFire();
+                    }
+                }
+            });
+        }
+
+        /* --- Round & Match Progression --- */
+        function startNewRound(isMatchStart = false) {
+            if (isMatchStart) {
+                gameState.scoreDefenders = 0;
+                gameState.scoreAttackers = 0;
+                playerState.credits = 800;
+            } else {
+                // Round reward economy
+                playerState.credits = Math.min(9000, playerState.credits + 2000 + (gameState.consecutiveLosses * 500));
+            }
+
+            gameState.phase = 'BUY';
+            gameState.roundTimer = 15;
+            gameState.spikePlanted = false;
+            if (gameState.spikeMesh) { scene.remove(gameState.spikeMesh); gameState.spikeMesh = null; }
+            if (gameState.buyPhaseBarrierMesh) gameState.buyPhaseBarrierMesh.visible = true;
+
+            playerState.hp = 100;
+            playerState.ammo[playerState.sidearm] = WEAPON_DATA[playerState.sidearm].ammoMax;
+            if (playerState.primary) playerState.ammo[playerState.primary] = WEAPON_DATA[playerState.primary].ammoMax;
+
+            // Spawn Player at Defenders spawn
+            cameraContainer.position.set(0, 1.6, 25);
+
+            spawnBots();
+            updateHUD();
+            startRoundTimer();
+        }
+
+        function startRoundTimer() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+
+            gameState.timerInterval = setInterval(() => {
+                gameState.roundTimer--;
+
+                const mins = Math.floor(gameState.roundTimer / 60);
+                const secs = (gameState.roundTimer % 60).toString().padStart(2, '0');
+                document.getElementById('round-timer').innerText = `${mins}:${secs}`;
+
+                if (gameState.phase === 'BUY' && gameState.roundTimer <= 0) {
+                    gameState.phase = 'ACTION';
+                    gameState.roundTimer = 100; // 1:40 action phase
+                    document.getElementById('round-phase').innerText = 'ACTION PHASE';
+                    if (gameState.buyPhaseBarrierMesh) gameState.buyPhaseBarrierMesh.visible = false;
+                    closeBuyMenu();
+                } else if (gameState.phase === 'ACTION' && gameState.roundTimer <= 0 && !gameState.spikePlanted) {
+                    // Time out -> Defenders win round
+                    endRound('defenders');
+                }
+            }, 1000);
+        }
+
+        function endRound(winnerTeam) {
+            clearInterval(gameState.timerInterval);
+            if (winnerTeam === 'defenders') {
+                gameState.scoreDefenders++;
+            } else {
+                gameState.scoreAttackers++;
+            }
+
+            document.getElementById('score-defenders').innerText = gameState.scoreDefenders;
+            document.getElementById('score-attackers').innerText = gameState.scoreAttackers;
+
+            addKillfeedItem('SYSTEM', winnerTeam === 'defenders' ? 'DEFENDERS WIN ROUND' : 'ATTACKERS WIN ROUND', 'cross');
+
+            setTimeout(() => {
+                startNewRound();
+            }, 3000);
+        }
+
+        /* --- Economy & Buy Menu --- */
+        function toggleBuyMenu() {
+            if (gameState.phase !== 'BUY') return;
+            const menu = document.getElementById('buy-menu');
+            if (menu.style.display === 'flex') {
+                closeBuyMenu();
+            } else {
+                menu.style.display = 'flex';
+                document.getElementById('buy-credits-val').innerText = playerState.credits;
+            }
+        }
+
+        function closeBuyMenu() {
+            document.getElementById('buy-menu').style.display = 'none';
+        }
+
+        function buyWeapon(weaponKey) {
+            const weapon = WEAPON_DATA[weaponKey];
+            if (playerState.credits >= weapon.price) {
+                playerState.credits -= weapon.price;
+                if (weapon.category === 'sidearm') {
+                    playerState.sidearm = weaponKey;
+                } else {
+                    playerState.primary = weaponKey;
+                    playerState.activeSlot = 'primary';
+                }
+                playerState.ammo[weaponKey] = weapon.ammoMax;
+                playerState.reserve[weaponKey] = weapon.reserveMax;
+                updateHUD();
+                document.getElementById('buy-credits-val').innerText = playerState.credits;
+            }
+        }
+
+        function buyArmor(type) {
+            const cost = type === 'light' ? 400 : 1000;
+            const amount = type === 'light' ? 25 : 50;
+            if (playerState.credits >= cost) {
+                playerState.credits -= cost;
+                playerState.shield = amount;
+                updateHUD();
+                document.getElementById('buy-credits-val').innerText = playerState.credits;
+            }
+        }
+
+        function buyAbility(abilityKey) {
+            const info = AGENT_DATA[playerState.agent].abilities[abilityKey];
+            if (playerState.credits >= info.price && playerState.abilities[abilityKey] < info.maxCharges) {
+                playerState.credits -= info.price;
+                playerState.abilities[abilityKey]++;
+                setupAbilitiesHUD();
+                updateHUD();
+                document.getElementById('buy-credits-val').innerText = playerState.credits;
+            }
+        }
+
+        /* --- 5v5 AI Bots (`TrainingBot` Class) --- */
+        class TrainingBot {
+            constructor(id, team, x, z) {
+                this.id = id;
+                this.team = team; // 'cyan' (Defender/Ally) or 'red' (Attacker/Enemy)
+                this.hp = 100;
+                this.shield = 25;
+                this.weapon = team === 'cyan' ? 'phantom' : 'vandal';
+
+                // Mesh
+                const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 16);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: team === 'cyan' ? 0x00f3ff : 0xff4655,
+                    emissive: team === 'cyan' ? 0x005577 : 0x770011,
+                    roughness: 0.4
+                });
+                this.mesh = new THREE.Mesh(geo, mat);
+                this.mesh.position.set(x, 0.9, z);
+                this.mesh.castShadow = true;
+                scene.add(this.mesh);
+
+                this.targetPos = new THREE.Vector3(x + (Math.random() * 20 - 10), 0.9, z + (Math.random() * 20 - 10));
+                this.lastShootTime = 0;
+            }
+
+            update(delta) {
+                if (this.hp <= 0) return;
+
+                // Simple roaming movement
+                if (this.mesh.position.distanceTo(this.targetPos) < 2) {
+                    this.targetPos.set(
+                        (Math.random() * 80 - 40),
+                        0.9,
+                        (Math.random() * 80 - 40)
+                    );
+                } else {
+                    const dir = new THREE.Vector3().subVectors(this.targetPos, this.mesh.position).normalize();
+                    this.mesh.position.addScaledVector(dir, delta * 3);
+                    this.mesh.lookAt(this.targetPos.x, 0.9, this.targetPos.z);
+                }
+
+                // AI Shooting player if enemy
+                if (this.team === 'red') {
+                    const distToPlayer = this.mesh.position.distanceTo(cameraContainer.position);
+                    if (distToPlayer < 25 && performance.now() - this.lastShootTime > 1200) {
+                        this.lastShootTime = performance.now();
+                        audio.playShootSound('vandal');
+
+                        // 30% chance to hit player
+                        if (Math.random() < 0.3) {
+                            damagePlayer(25);
+                        }
+                    }
+                }
+            }
+
+            takeDamage(amount, isHeadshot) {
+                const totalDmg = isHeadshot ? amount * 3 : amount;
+                if (this.shield > 0) {
+                    const shieldDmg = Math.min(this.shield, totalDmg);
+                    this.shield -= shieldDmg;
+                    this.hp -= (totalDmg - shieldDmg);
+                } else {
+                    this.hp -= totalDmg;
+                }
+
+                if (this.hp <= 0) {
+                    scene.remove(this.mesh);
+                    playerState.kills++;
+                    playerState.credits += 300;
+                    addKillfeedItem('YOU', `Enemy Bot (${this.team.toUpperCase()})`, isHeadshot ? 'headshot' : 'kill');
+                    updateHUD();
+                }
+            }
+        }
+
+        function spawnBots() {
+            bots.forEach(b => scene.remove(b.mesh));
+            bots = [];
+
+            // Spawn 4 Allies (Cyan)
+            for (let i = 0; i < 4; i++) {
+                bots.push(new TrainingBot(`Ally_${i}`, 'cyan', (Math.random() * 20 - 10), 20 + Math.random() * 10));
+            }
+            // Spawn 5 Enemies (Red)
+            for (let i = 0; i < 5; i++) {
+                bots.push(new TrainingBot(`Enemy_${i}`, 'red', (Math.random() * 40 - 20), -20 - Math.random() * 20));
+            }
+        }
+
+        function damagePlayer(amount) {
+            if (playerState.shield > 0) {
+                const shieldDmg = Math.min(playerState.shield, amount);
+                playerState.shield -= shieldDmg;
+                playerState.hp -= (amount - shieldDmg);
+            } else {
+                playerState.hp -= amount;
+            }
+
+            // Damage overlay flash
+            const overlay = document.getElementById('damage-overlay');
+            overlay.style.opacity = '0.8';
+            setTimeout(() => { overlay.style.opacity = '0'; }, 200);
+
+            if (playerState.hp <= 0) {
+                playerState.hp = 0;
+                playerState.deaths++;
+                addKillfeedItem('Enemy Bot', 'YOU', 'kill');
+                endRound('attackers');
+            }
+            updateHUD();
+        }
+
+        /* --- Weapon Switch & Shooting --- */
+        function switchWeaponSlot(slot) {
+            if (slot === 'primary' && !playerState.primary) return;
+            playerState.activeSlot = slot;
+            updateHUD();
+        }
+
+        function handlePrimaryFire() {
+            const activeWpnKey = playerState.activeSlot === 'primary' ? playerState.primary : playerState.sidearm;
+            if (!activeWpnKey) return;
+            const wpn = WEAPON_DATA[activeWpnKey];
+
+            if (playerState.ammo[activeWpnKey] <= 0) {
+                reloadWeapon();
+                return;
+            }
+
+            playerState.ammo[activeWpnKey]--;
+            audio.playShootSound(activeWpnKey);
+            updateHUD();
+
+            // Recoil viewmodel effect
+            viewmodelWeaponMesh.position.z += 0.08;
+            setTimeout(() => { viewmodelWeaponMesh.position.z -= 0.08; }, 80);
+
+            // Raycast shot
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+            const botMeshes = bots.filter(b => b.hp > 0).map(b => b.mesh);
+            const intersects = raycaster.intersectObjects(botMeshes);
+
+            if (intersects.length > 0) {
+                const hitMesh = intersects[0].object;
+                const hitBot = bots.find(b => b.mesh === hitMesh);
+                if (hitBot) {
+                    const isHeadshot = intersects[0].point.y > 1.4;
+                    if (isHeadshot) audio.playHeadshotSound();
+                    hitBot.takeDamage(wpn.damage, isHeadshot);
+                }
+            }
+        }
+
+        function reloadWeapon() {
+            const activeWpnKey = playerState.activeSlot === 'primary' ? playerState.primary : playerState.sidearm;
+            if (!activeWpnKey) return;
+            const wpn = WEAPON_DATA[activeWpnKey];
+
+            const needed = wpn.ammoMax - playerState.ammo[activeWpnKey];
+            if (needed > 0 && playerState.reserve[activeWpnKey] > 0) {
+                const amount = Math.min(needed, playerState.reserve[activeWpnKey]);
+                playerState.reserve[activeWpnKey] -= amount;
+                playerState.ammo[activeWpnKey] += amount;
+                updateHUD();
+            }
+        }
+
+        /* --- Spike Mechanics --- */
+        function equipSpike() {
+            playerState.activeSlot = 'spike';
+            updateHUD();
+        }
+
+        function checkPlantDefuse() {
+            // Check plant
+            const distA = cameraContainer.position.distanceTo(new THREE.Vector3(siteAZone.x, 0, siteAZone.z));
+            const distB = cameraContainer.position.distanceTo(new THREE.Vector3(siteBZone.x, 0, siteBZone.z));
+
+            if (!gameState.spikePlanted && (distA < siteAZone.radius || distB < siteBZone.radius)) {
+                plantSpikeSequence();
+            } else if (gameState.spikePlanted) {
+                defuseSpikeSequence();
+            }
+        }
+
+        function plantSpikeSequence() {
+            const bar = document.getElementById('interaction-bar-container');
+            const fill = document.getElementById('progress-fill');
+            document.getElementById('interaction-label').innerText = 'PLANTING SPIKE';
+            bar.style.display = 'block';
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 2.5; // 4 seconds total (100 / 2.5 * 100ms)
+                fill.style.width = `${progress}%`;
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    bar.style.display = 'none';
+                    gameState.spikePlanted = true;
+                    gameState.spikePosition = cameraContainer.position.clone();
+
+                    // Spawn 3D Spike object
+                    const spikeGeo = new THREE.ConeGeometry(0.3, 0.8, 4);
+                    const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff4655, emissive: 0xaa0000 });
+                    gameState.spikeMesh = new THREE.Mesh(spikeGeo, spikeMat);
+                    gameState.spikeMesh.position.set(cameraContainer.position.x, 0.4, cameraContainer.position.z);
+                    scene.add(gameState.spikeMesh);
+
+                    startSpikeFuse();
+                    addKillfeedItem('SYSTEM', 'SPIKE HAS BEEN PLANTED', 'spike');
+                }
+            }, 100);
+        }
+
+        function startSpikeFuse() {
+            gameState.spikeTimer = 45;
+            let beepInterval = 1000;
+
+            const fuseLoop = () => {
+                if (!gameState.spikePlanted) return;
+                gameState.spikeTimer -= (beepInterval / 1000);
+                audio.playSpikeBeep(1 + (45 - gameState.spikeTimer) / 30);
+
+                if (gameState.spikeTimer <= 0) {
+                    endRound('attackers');
+                } else {
+                    beepInterval = Math.max(150, gameState.spikeTimer * 20);
+                    setTimeout(fuseLoop, beepInterval);
+                }
+            };
+            fuseLoop();
+        }
+
+        function defuseSpikeSequence() {
+            audio.playDefuseAlert();
+            const bar = document.getElementById('interaction-bar-container');
+            const fill = document.getElementById('progress-fill');
+            const checkpoint = document.getElementById('half-checkpoint');
+            document.getElementById('interaction-label').innerText = 'DEFUSING SPIKE';
+            checkpoint.style.display = 'block';
+            bar.style.display = 'block';
+
+            let progress = gameState.spikeHalfCheckpointReached ? 50 : 0;
+            fill.style.width = `${progress}%`;
+
+            const interval = setInterval(() => {
+                progress += 1.4; // ~7 seconds total
+                fill.style.width = `${progress}%`;
+
+                if (progress >= 50) {
+                    gameState.spikeHalfCheckpointReached = true;
+                }
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    bar.style.display = 'none';
+                    checkpoint.style.display = 'none';
+                    gameState.spikePlanted = false;
+                    endRound('defenders');
+                }
+            }, 100);
+        }
+
+        /* --- Agent Tactical Abilities --- */
+        function useAbility(abilityKey) {
+            if (playerState.abilities[abilityKey] <= 0) return;
+            playerState.abilities[abilityKey]--;
+
+            audio.playAbilitySound(abilityKey);
+
+            if (playerState.agent === 'jett') {
+                if (abilityKey === 'Q') velocity.y += 12; // Updraft leap
+                if (abilityKey === 'E') { // Tailwind dash
+                    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraContainer.quaternion);
+                    cameraContainer.position.addScaledVector(dir, 15);
+                }
+                if (abilityKey === 'C') spawnSmokeCloud();
+            } else if (playerState.agent === 'sage') {
+                if (abilityKey === 'C') spawnIceWall();
+                if (abilityKey === 'E') playerState.hp = Math.min(100, playerState.hp + 60); // Heal
+            } else if (playerState.agent === 'phoenix') {
+                if (abilityKey === 'Q') flashScreen(); // Curveball flash
+            } else if (playerState.agent === 'reyna') {
+                if (abilityKey === 'E') playerState.hp = Math.min(100, playerState.hp + 50); // Devour
+            }
+
+            setupAbilitiesHUD();
+            updateHUD();
+        }
+
+        function spawnSmokeCloud() {
+            const smokeGeo = new THREE.SphereGeometry(3, 16, 16);
+            const smokeMat = new THREE.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.6 });
+            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+            smoke.position.set(cameraContainer.position.x, 1.5, cameraContainer.position.z - 5);
+            scene.add(smoke);
+            setTimeout(() => scene.remove(smoke), 6000);
+        }
+
+        function spawnIceWall() {
+            const wallGeo = new THREE.BoxGeometry(6, 4, 1);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, roughness: 0.2, transparent: true, opacity: 0.8 });
+            const wall = new THREE.Mesh(wallGeo, wallMat);
+            wall.position.set(cameraContainer.position.x, 2, cameraContainer.position.z - 4);
+            scene.add(wall);
+        }
+
+        function flashScreen() {
+            const flash = document.getElementById('flash-overlay');
+            flash.style.opacity = '1';
+            setTimeout(() => { flash.style.opacity = '0'; }, 1500);
+        }
+
+        /* --- HUD & UI Updates --- */
+        function updateHUD() {
+            document.getElementById('hp-value').innerText = playerState.hp;
+            document.getElementById('shield-value').innerText = playerState.shield;
+            document.getElementById('credits-value').innerText = playerState.credits;
+
+            const activeWpnKey = playerState.activeSlot === 'primary' ? playerState.primary : playerState.sidearm;
+            if (activeWpnKey) {
+                const wpn = WEAPON_DATA[activeWpnKey];
+                document.getElementById('weapon-name').innerText = wpn.name;
+                document.getElementById('ammo-display').innerText = `${playerState.ammo[activeWpnKey]} / ${playerState.reserve[activeWpnKey]}`;
+            } else if (playerState.activeSlot === 'spike') {
+                document.getElementById('weapon-name').innerText = 'SPIKE';
+                document.getElementById('ammo-display').innerText = '1 / 1';
+            }
+        }
+
+        function addKillfeedItem(killer, victim, type) {
+            const feed = document.getElementById('killfeed');
+            const item = document.createElement('div');
+            item.className = 'kill-item';
+            item.innerHTML = `<span><b>${killer}</b></span> <span>${type === 'headshot' ? '🎯' : '⚔️'}</span> <span><b>${victim}</b></span>`;
+            feed.appendChild(item);
+            setTimeout(() => item.remove(), 5000);
+        }
+
+        function showScoreboard(show) {
+            const board = document.getElementById('scoreboard');
+            if (show) {
+                board.style.display = 'flex';
+                renderScoreboardRows();
+            } else {
+                board.style.display = 'none';
+            }
+        }
+
+        function renderScoreboardRows() {
+            const body = document.getElementById('scoreboard-body');
+            body.innerHTML = `
+                <tr>
+                    <td>${AGENT_DATA[playerState.agent].name}</td>
+                    <td class="team-defenders">YOU</td>
+                    <td>Defenders</td>
+                    <td>${playerState.activeSlot.toUpperCase()}</td>
+                    <td>${playerState.kills} / ${playerState.deaths} / ${playerState.assists}</td>
+                    <td>${playerState.credits}</td>
+                </tr>
+            `;
+
+            bots.forEach(bot => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>Bot</td>
+                    <td class="${bot.team === 'cyan' ? 'team-defenders' : 'team-attackers'}">${bot.id}</td>
+                    <td>${bot.team === 'cyan' ? 'Defenders' : 'Attackers'}</td>
+                    <td>${bot.weapon.toUpperCase()}</td>
+                    <td>0 / 0 / 0</td>
+                    <td>800</td>
+                `;
+                body.appendChild(row);
+            });
+        }
+
+        /* --- Minimap Rendering --- */
+        function renderMinimap() {
+            const canvas = document.getElementById('minimap-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 160, 160);
+
+            // Background
+            ctx.fillStyle = '#1f2326';
+            ctx.fillRect(0, 0, 160, 160);
+
+            // Center is Player (80, 80)
+            const scale = 1.2;
+
+            // Render Site outlines
+            ctx.fillStyle = 'rgba(255,70,85,0.4)';
+            ctx.beginPath();
+            ctx.arc(80 + (siteAZone.x - cameraContainer.position.x) * scale, 80 + (siteAZone.z - cameraContainer.position.z) * scale, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Render Bots
+            bots.forEach(b => {
+                if (b.hp <= 0) return;
+                const bx = 80 + (b.mesh.position.x - cameraContainer.position.x) * scale;
+                const bz = 80 + (b.mesh.position.z - cameraContainer.position.z) * scale;
+
+                ctx.fillStyle = b.team === 'cyan' ? '#00f3ff' : '#ff4655';
+                ctx.beginPath();
+                ctx.arc(bx, bz, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Player Icon (Cyan triangle pointing in yaw direction)
+            ctx.save();
+            ctx.translate(80, 80);
+            ctx.rotate(-yaw);
+            ctx.fillStyle = '#00f3ff';
+            ctx.beginPath();
+            ctx.moveTo(0, -6);
+            ctx.lineTo(-5, 5);
+            ctx.lineTo(5, 5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        /* --- Main Game Loop --- */
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            prevTime = time;
+
+            if (gameState.phase !== 'AGENT_SELECT') {
+                // Movement physics
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 2.0 * delta; // Gravity
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 40.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 40.0 * delta;
+
+                cameraContainer.translateX(-velocity.x * delta);
+                cameraContainer.translateZ(velocity.z * delta);
+                cameraContainer.position.y += velocity.y * delta;
+
+                if (cameraContainer.position.y < 1.6) {
+                    velocity.y = 0;
+                    cameraContainer.position.y = 1.6;
+                    isJumping = false;
+                }
+
+                // Barrier Collision during Buy Phase
+                if (gameState.phase === 'BUY' && cameraContainer.position.z < 1) {
+                    cameraContainer.position.z = 1;
+                }
+
+                // Update AI Bots
+                bots.forEach(bot => bot.update(delta));
+
+                // Minimap
+                renderMinimap();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Initialize engine on load
+        window.addEventListener('DOMContentLoaded', initEngine);
+    </script>
+</body>
+</html>
